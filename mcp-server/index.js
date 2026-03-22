@@ -48,7 +48,7 @@ server.tool('get_backlog', 'Get tasks available for agents to pick up (Backlog/T
 server.tool('create_task', 'Create a new task', {
   name: z.string().describe('Task name'),
   description: z.string().optional().describe('Task description'),
-  status: z.enum(['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Cancelled']).optional(),
+  status: z.enum(['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled']).optional(),
   priority: z.enum(['Urgent', 'High', 'Medium', 'Low']).optional(),
   assignee: z.enum(['Human', 'Agent', 'Unassigned']).optional(),
   project_id: z.number().optional().describe('Project ID to link to'),
@@ -62,7 +62,7 @@ server.tool('create_task', 'Create a new task', {
 server.tool('update_task', 'Update an existing task', {
   id: z.number().describe('Task ID'),
   name: z.string().optional(),
-  status: z.enum(['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Cancelled']).optional(),
+  status: z.enum(['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled']).optional(),
   priority: z.enum(['Urgent', 'High', 'Medium', 'Low']).optional(),
   assignee: z.enum(['Human', 'Agent', 'Unassigned']).optional(),
   project_id: z.number().optional(),
@@ -72,7 +72,7 @@ server.tool('update_task', 'Update an existing task', {
   return { content: [{ type: 'text', text: `Updated TSK-${task.id}: status=${task.status}, assignee=${task.assignee}` }] };
 });
 
-server.tool('claim_task', 'Claim a task from the backlog and set it to In Progress', {
+server.tool('claim_task', 'Claim a task from the backlog and move it to Brainstorming', {
   id: z.number().describe('Task ID to claim'),
   assignee: z.string().optional().describe('Who is claiming: Human or Agent (default: Agent)'),
 }, async ({ id, assignee }) => {

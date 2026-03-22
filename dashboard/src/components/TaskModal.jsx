@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../hooks/useApi.js';
 
-const STATUSES = ['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Cancelled'];
+const STATUSES = ['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled'];
 const PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
 const ASSIGNEES = ['Human', 'Agent', 'Unassigned'];
 
@@ -62,6 +62,7 @@ export default function TaskModal({ task, projects, onClose, onUpdate }) {
               <span className="prop-label">Assignee</span><span className={`badge assignee-${task.assignee.toLowerCase()}`}>{task.assignee}</span>
               <span className="prop-label">Project</span><span>{task.project_name || '—'}</span>
               <span className="prop-label">Size</span><span>{task.size || '—'}</span>
+              <span className="prop-label">Rounds</span><span>{task.rounds || 0}{task.rounds >= 3 ? ' ⚠️ consider new approach' : ''}</span>
               <span className="prop-label">ID</span><span style={{ color: 'var(--text-muted)' }}>TSK-{task.id}</span>
             </div>
             {task.description && <p style={{ fontSize: 13, marginBottom: 16, color: 'var(--text-muted)' }}>{task.description}</p>}

@@ -4,13 +4,15 @@ import Board from './components/Board.jsx';
 import TaskModal from './components/TaskModal.jsx';
 import CreateTaskModal from './components/CreateTaskModal.jsx';
 import CreateProjectModal from './components/CreateProjectModal.jsx';
+import ProjectPage from './components/ProjectPage.jsx';
 
-const COLUMNS = ['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Cancelled'];
+const COLUMNS = ['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled'];
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [filterProject, setFilterProject] = useState('');
@@ -27,8 +29,6 @@ export default function App() {
   }, [filterProject, filterAssignee]);
 
   useEffect(() => { load(); }, [load]);
-
-  // Poll for updates every 5s
   useEffect(() => {
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
@@ -49,6 +49,17 @@ export default function App() {
     if (grouped[t.status]) grouped[t.status].push(t);
   }
 
+  // Project detail view
+  if (selectedProject) {
+    return (
+      <ProjectPage
+        project={selectedProject}
+        onBack={() => { setSelectedProject(null); load(); }}
+        onTaskClick={setSelectedTask}
+      />
+    );
+  }
+
   return (
     <div className="app">
       <div className="header">
@@ -60,38 +71,59 @@ export default function App() {
       </div>
 
       <div className="tabs">
-        <button className={`tab ${view === 'board' ? 'active' : ''}`} onClick={() => setView('board')}>Board</button>
+        <button className={`tab ${view === 'board' ? 'active' : ''}`} onClick={() => { setView('board'); setFilterAssignee(''); }}>Board</button>
         <button className={`tab ${view === 'my-focus' ? 'active' : ''}`} onClick={() => { setView('my-focus'); setFilterAssignee('Human'); }}>My Focus</button>
         <button className={`tab ${view === 'agent-queue' ? 'active' : ''}`} onClick={() => { setView('agent-queue'); setFilterAssignee('Agent'); }}>Agent Queue</button>
-        <button className={`tab ${view === 'all' ? 'active' : ''}`} onClick={() => { setView('all'); setFilterAssignee(''); }}>All</button>
+        <button className={`tab ${view === 'projects' ? 'active' : ''}`} onClick={() => { setView('projects'); setFilterAssignee(''); }}>Projects</button>
       </div>
 
-      <div className="filter-bar">
-        <span style={{ color: 'var(--text-muted)' }}>Project:</span>
-        <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
-          <option value="">All</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        {view === 'board' && (
-          <>
-            <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>Assignee:</span>
-            <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
+      {view === 'projects' ? (
+        <div style={{ padding: 20 }}>
+          <div className="projects-grid">
+            {projects.map(p => (
+              <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
+                <div className="project-card-header">
+                  <span className="project-card-name">{p.name}</span>
+                  <span className={`badge priority-${p.priority === 'P0' ? 'urgent' : p.priority === 'P1' ? 'high' : p.priority === 'P2' ? 'medium' : 'low'}`}>{p.priority}</span>
+                </div>
+                <div className="project-card-desc">{p.description || 'No description'}</div>
+                <div className="card-meta" style={{ marginTop: 8 }}>
+                  <span className={`badge ${p.status === 'Active' ? 'priority-medium' : 'priority-low'}`}>{p.status}</span>
+                  {p.category && <span className="badge label">{p.category}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="filter-bar">
+            <span style={{ color: 'var(--text-muted)' }}>Project:</span>
+            <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
               <option value="">All</option>
-              <option value="Human">Human</option>
-              <option value="Agent">Agent</option>
-              <option value="Unassigned">Unassigned</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-          </>
-        )}
-      </div>
-
-      <Board columns={COLUMNS} grouped={grouped} onCardClick={setSelectedTask} onStatusChange={handleStatusChange} />
+            {view === 'board' && (
+              <>
+                <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>Assignee:</span>
+                <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
+                  <option value="">All</option>
+                  <option value="Human">Human</option>
+                  <option value="Agent">Agent</option>
+                  <option value="Unassigned">Unassigned</option>
+                </select>
+              </>
+            )}
+          </div>
+          <Board columns={COLUMNS} grouped={grouped} onCardClick={setSelectedTask} onStatusChange={handleStatusChange} />
+        </>
+      )}
 
       {selectedTask && (
         <TaskModal task={selectedTask} projects={projects} onClose={() => setSelectedTask(null)} onUpdate={handleTaskUpdated} />
       )}
       {showCreate && (
-        <CreateTaskModal projects={projects} onClose={() => setShowCreate(false)} onCreate={handleTaskCreated} />
+        <CreateTaskModal projects={projects} onClose={() => setShowCreate(false)} onCreate={handleTaskCreated} defaultProjectId={filterProject} />
       )}
       {showCreateProject && (
         <CreateProjectModal onClose={() => setShowCreateProject(false)} onCreate={handleProjectCreated} />

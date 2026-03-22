@@ -30,6 +30,7 @@ export default function Card({ task, onClick }) {
         )}
         {task.project_name && <span className="badge project">{task.project_name}</span>}
         {task.size && <span className="badge size">{task.size}</span>}
+        {task.rounds > 0 && <span className="badge rounds" title={`${task.rounds} round(s) of iteration`}>R{task.rounds}</span>}
         {labels.map((l) => <span key={l} className="badge label">{l}</span>)}
       </div>
     </div>

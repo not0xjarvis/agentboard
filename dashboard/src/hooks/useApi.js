@@ -15,6 +15,7 @@ async function request(path, opts = {}) {
 export const api = {
   // Projects
   getProjects: () => request('/projects'),
+  getProject: (id) => request(`/projects/${id}`),
   createProject: (body) => request('/projects', { method: 'POST', body }),
   updateProject: (id, body) => request(`/projects/${id}`, { method: 'PUT', body }),
   deleteProject: (id) => request(`/projects/${id}`, { method: 'DELETE' }),

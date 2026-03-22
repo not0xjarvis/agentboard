@@ -13,6 +13,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
     status TEXT DEFAULT 'Active' CHECK(status IN ('Active','Paused','Idea','Archived')),
     category TEXT DEFAULT '',
     priority TEXT DEFAULT 'P2' CHECK(priority IN ('P0','P1','P2','P3')),
@@ -26,11 +27,12 @@ db.exec(`
     project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
-    status TEXT DEFAULT 'Backlog' CHECK(status IN ('Backlog','Todo','In Progress','In Review','Done','Cancelled')),
+    status TEXT DEFAULT 'Backlog' CHECK(status IN ('Backlog','Brainstorming','In Progress','In Review','Done','Cancelled')),
     priority TEXT DEFAULT 'Medium' CHECK(priority IN ('Urgent','High','Medium','Low')),
     assignee TEXT DEFAULT 'Unassigned' CHECK(assignee IN ('Human','Agent','Unassigned')),
     labels TEXT DEFAULT '[]',
     size TEXT DEFAULT '' CHECK(size IN ('','XS','S','M','L','XL')),
+    rounds INTEGER DEFAULT 0,
     due_date TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
@@ -48,5 +50,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
   CREATE INDEX IF NOT EXISTS idx_comments_task ON comments(task_id);
 `);
+
+// Migrations for existing databases
+const cols = db.prepare("PRAGMA table_info(projects)").all().map(c => c.name);
+if (!cols.includes('notes')) {
+  db.exec("ALTER TABLE projects ADD COLUMN notes TEXT DEFAULT ''");
+}
+
+const taskCols = db.prepare("PRAGMA table_info(tasks)").all().map(c => c.name);
+if (!taskCols.includes('rounds')) {
+  db.exec("ALTER TABLE tasks ADD COLUMN rounds INTEGER DEFAULT 0");
+}
+
+// Migrate old statuses: Todo → Backlog (todos auto-create backlogs now)
+db.exec("UPDATE tasks SET status = 'Backlog' WHERE status = 'Todo'");
 
 export default db;

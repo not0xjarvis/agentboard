@@ -36,7 +36,7 @@ export default function CreateTaskModal({ projects, onClose, onCreate }) {
             <div className="form-group">
               <label>Status</label>
               <select value={form.status} onChange={(e) => set('status', e.target.value)}>
-                {['Backlog', 'Todo', 'In Progress', 'In Review', 'Done'].map(s => <option key={s}>{s}</option>)}
+                {['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done'].map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div className="form-group">

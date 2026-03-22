@@ -16,14 +16,15 @@ async function req(path, opts = {}) {
 
 // Formatting helpers
 const PRIORITY_ICON = { Urgent: '!!!', High: '!! ', Medium: '!  ', Low: '   ' };
-const STATUS_ICON = { Backlog: '○', Todo: '◎', 'In Progress': '◉', 'In Review': '◈', Done: '●', Cancelled: '✕' };
+const STATUS_ICON = { Backlog: '○', Brainstorming: '◎', 'In Progress': '◉', 'In Review': '◈', Done: '●', Cancelled: '✕' };
 
 function fmtTask(t) {
   const pri = PRIORITY_ICON[t.priority] || '   ';
   const st = STATUS_ICON[t.status] || '?';
   const proj = t.project_name ? ` [${t.project_name}]` : '';
   const who = t.assignee !== 'Unassigned' ? ` @${t.assignee}` : '';
-  return `  ${pri} ${st} TSK-${String(t.id).padEnd(4)} ${t.name}${proj}${who}`;
+  const rounds = t.rounds > 0 ? ` (R${t.rounds})` : '';
+  return `  ${pri} ${st} TSK-${String(t.id).padEnd(4)} ${t.name}${proj}${who}${rounds}`;
 }
 
 function fmtProject(p) {
@@ -133,6 +134,25 @@ const commands = {
     console.log(`TSK-${id} → In Review${comment ? ' (comment added)' : ''}`);
   },
 
+  async brainstorm() {
+    const id = process.argv[3];
+    const comment = process.argv[4];
+    if (!id) return console.log('Usage: ab brainstorm <task_id> ["comment"]');
+    await req(`/tasks/${id}`, { method: 'PUT', body: { status: 'Brainstorming' } });
+    if (comment) await req(`/tasks/${id}/comments`, { method: 'POST', body: { content: comment, author: 'Agent' } });
+    const task = await req(`/tasks/${id}`);
+    console.log(`TSK-${id} → Brainstorming (round ${task.rounds})${comment ? ' (comment added)' : ''}`);
+  },
+
+  async progress() {
+    const id = process.argv[3];
+    const comment = process.argv[4];
+    if (!id) return console.log('Usage: ab progress <task_id> ["comment"]');
+    await req(`/tasks/${id}`, { method: 'PUT', body: { status: 'In Progress' } });
+    if (comment) await req(`/tasks/${id}/comments`, { method: 'POST', body: { content: comment, author: 'Agent' } });
+    console.log(`TSK-${id} → In Progress${comment ? ' (comment added)' : ''}`);
+  },
+
   async update() {
     const id = process.argv[3];
     if (!id) return console.log('Usage: ab update <task_id> --status "In Progress" [--priority High] [--assignee Agent]');
@@ -168,17 +188,24 @@ const commands = {
     ab backlog                           Show tasks available for agents
     ab show <id>                         Show task details + comments
     ab create "name" [--flags]           Create a task
-    ab claim <id> [assignee]             Claim task → In Progress
-    ab done <id> ["comment"]             Mark task → Done
-    ab review <id> ["comment"]           Mark task → In Review
+    ab claim <id> [assignee]             Claim task → Brainstorming
+    ab brainstorm <id> ["comment"]       Move to Brainstorming (bumps round)
+    ab progress <id> ["comment"]         Move to In Progress
+    ab review <id> ["comment"]           Move to In Review
+    ab done <id> ["comment"]             Move to Done
     ab update <id> --field value         Update task fields
     ab comment <id> "message"            Add a comment
 
+  FLOW
+    Backlog → Brainstorming → In Progress → In Review → Done
+    (can loop: Review → Brainstorm → Progress → Review, rounds track iterations)
+
   EXAMPLES
     ab backlog                           See what's available
-    ab claim 3                           Pick up task #3
-    ab comment 3 "implementing auth"     Log progress
+    ab claim 3                           Pick up task #3 → Brainstorming
+    ab progress 3 "approach decided"     Start implementing
     ab review 3 "ready for review"       Hand off to human
+    ab brainstorm 3 "needs rethink"      Back to brainstorming (round++)
     ab done 3 "auth flow complete"       Mark complete
 
   ENV

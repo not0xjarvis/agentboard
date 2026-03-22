@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${SELFSTACK_HOST_PORT:-3000}:3000"
+    volumes:
+      - data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+
+volumes:
+  data:

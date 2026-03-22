@@ -1,0 +1,10 @@
+{
+  "name": "agentboard-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "agentboard-mcp": "./index.js" },
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}

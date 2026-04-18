@@ -190,9 +190,20 @@ app.get('/api/backlog', (req, res) => {
 app.post('/api/tasks/:id/claim', (req, res) => {
   const { assignee } = req.body;
   // Legacy endpoint: simple claim without worktree. Moves Backlog → Planning.
-  db.prepare(
-    "UPDATE tasks SET status = 'Planning', assignee = ?, updated_at = datetime('now') WHERE id = ?"
+  // Uses atomic CAS so concurrent claims don't both "succeed".
+  const info = db.prepare(
+    "UPDATE tasks SET status = 'Planning', assignee = ?, updated_at = datetime('now') WHERE id = ? AND status = 'Backlog'"
   ).run(assignee || 'Agent', req.params.id);
+
+  if (info.changes === 0) {
+    const cur = db.prepare('SELECT status FROM tasks WHERE id = ?').get(req.params.id);
+    return res.status(409).json({
+      error: cur
+        ? `TSK-${req.params.id} is not claimable (current status: ${cur.status})`
+        : `TSK-${req.params.id} not found`,
+    });
+  }
+
   const task = db.prepare(
     'SELECT t.*, p.name as project_name FROM tasks t LEFT JOIN projects p ON t.project_id = p.id WHERE t.id = ?'
   ).get(req.params.id);
@@ -201,7 +212,7 @@ app.post('/api/tasks/:id/claim', (req, res) => {
       task.id, assignee || 'Agent', 'Claimed task — moving to Planning'
     );
   }
-  task ? res.json(task) : res.status(404).json({ error: 'not found' });
+  res.json(task);
 });
 
 // Atomic claim + worktree metadata write.
@@ -283,9 +294,11 @@ app.get('/api/worktrees', (req, res) => {
 });
 
 // Clear worktree metadata on a task. Filesystem removal is done by the CLI.
+// Accept `force` from either JSON body or query string (not all HTTP clients
+// send bodies on DELETE).
 app.delete('/api/tasks/:id/worktree', (req, res) => {
   const id = req.params.id;
-  const force = !!(req.body && req.body.force);
+  const force = !!((req.body && req.body.force) || req.query.force === 'true');
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
   if (!task) return res.status(404).json({ error: 'not found' });
 

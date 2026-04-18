@@ -96,6 +96,10 @@ if (!taskCols2.includes('pipeline_stage')) {
 
 // 1c. Status enum migration: Brainstorming/In Progress/In Review → Planning/Building/Review
 // SQLite can't alter a CHECK constraint, so we rebuild the table inside a transaction.
+// NOTE: The rebuild preserves all current columns, data, and the two indexes
+// (idx_tasks_status, idx_tasks_project). It would NOT preserve triggers, views,
+// or FTS indexes if any are ever added. If you add a trigger on `tasks`, also
+// recreate it at the end of this migrate() block.
 {
   const tasksSql = db.prepare(
     "SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'"

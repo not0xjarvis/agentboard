@@ -37,4 +37,11 @@ export const api = {
 
   // Agent
   getBacklog: () => request('/backlog'),
+
+  // Phase 1: activity + worktrees
+  getActivity: (projectId) => request(`/projects/${projectId}/activity`),
+  getWorktrees: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/worktrees${qs ? '?' + qs : ''}`);
+  },
 };

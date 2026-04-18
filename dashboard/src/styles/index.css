@@ -294,6 +294,65 @@ body {
   font-weight: 600;
 }
 
+/* Pipeline stage badge */
+.badge.stage {
+  background: rgba(163,113,247,0.15);
+  color: #a371f7;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* PR badge */
+.badge.pr {
+  background: rgba(63,185,80,0.15);
+  color: var(--done);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.badge.pr:hover { background: rgba(63,185,80,0.25); }
+
+/* Cancelled collapsible section (main board) */
+.cancelled-section {
+  border-top: 1px solid var(--border);
+  padding: 8px 20px 16px;
+  background: var(--surface);
+}
+.cancelled-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.cancelled-toggle:hover { color: var(--text); }
+.cancelled-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.cancelled-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.cancelled-row:hover { background: var(--surface-hover); border-color: var(--border); }
+.cancelled-row-name { color: var(--text); flex: 1; text-decoration: line-through; opacity: 0.7; }
+
 /* Projects grid */
 .projects-grid {
   display: grid;

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../hooks/useApi.js';
 
-const STATUSES = ['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled'];
+const STATUSES = ['Backlog', 'Planning', 'Building', 'Review', 'Done', 'Cancelled'];
+const STAGES = ['', 'design', 'plan', 'impl', 'review', 'ship', 'qa'];
 const PRIORITIES = ['Urgent', 'High', 'Medium', 'Low'];
 const ASSIGNEES = ['Human', 'Agent', 'Unassigned'];
 
@@ -24,6 +25,7 @@ export default function TaskModal({ task, projects, onClose, onUpdate }) {
       project_id: form.project_id || null,
       description: form.description,
       size: form.size,
+      pipeline_stage: form.pipeline_stage || null,
     });
     setEditing(false);
     onUpdate();
@@ -62,6 +64,10 @@ export default function TaskModal({ task, projects, onClose, onUpdate }) {
               <span className="prop-label">Assignee</span><span className={`badge assignee-${task.assignee.toLowerCase()}`}>{task.assignee}</span>
               <span className="prop-label">Project</span><span>{task.project_name || '—'}</span>
               <span className="prop-label">Size</span><span>{task.size || '—'}</span>
+              <span className="prop-label">Stage</span><span>{task.pipeline_stage || '—'}</span>
+              <span className="prop-label">Branch</span><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{task.branch_name || '—'}</span>
+              <span className="prop-label">Worktree</span><span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)', wordBreak: 'break-all' }}>{task.worktree_path || '—'}</span>
+              <span className="prop-label">PR</span><span>{task.pr_url ? <a href={task.pr_url} target="_blank" rel="noopener noreferrer" style={{color:'var(--accent)'}}>{task.pr_url}</a> : '—'}</span>
               <span className="prop-label">Rounds</span><span>{task.rounds || 0}{task.rounds >= 3 ? ' ⚠️ consider new approach' : ''}</span>
               <span className="prop-label">ID</span><span style={{ color: 'var(--text-muted)' }}>TSK-{task.id}</span>
             </div>
@@ -102,6 +108,12 @@ export default function TaskModal({ task, projects, onClose, onUpdate }) {
                 <select value={form.project_id || ''} onChange={(e) => setForm({ ...form, project_id: e.target.value ? parseInt(e.target.value) : null })}>
                   <option value="">None</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Pipeline Stage</label>
+                <select value={form.pipeline_stage || ''} onChange={(e) => setForm({ ...form, pipeline_stage: e.target.value })}>
+                  {STAGES.map(s => <option key={s} value={s}>{s || '—'}</option>)}
                 </select>
               </div>
             </div>

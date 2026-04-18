@@ -6,7 +6,8 @@ import CreateTaskModal from './components/CreateTaskModal.jsx';
 import CreateProjectModal from './components/CreateProjectModal.jsx';
 import ProjectPage from './components/ProjectPage.jsx';
 
-const COLUMNS = ['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled'];
+const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
+const CANCELLED_COL = 'Cancelled';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -18,6 +19,7 @@ export default function App() {
   const [filterProject, setFilterProject] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [view, setView] = useState('board');
+  const [showCancelled, setShowCancelled] = useState(false);
 
   const load = useCallback(async () => {
     const params = {};
@@ -45,9 +47,11 @@ export default function App() {
 
   const grouped = {};
   for (const col of COLUMNS) grouped[col] = [];
+  grouped[CANCELLED_COL] = [];
   for (const t of tasks) {
     if (grouped[t.status]) grouped[t.status].push(t);
   }
+  const cancelledTasks = grouped[CANCELLED_COL];
 
   // Project detail view
   if (selectedProject) {
@@ -116,6 +120,29 @@ export default function App() {
             )}
           </div>
           <Board columns={COLUMNS} grouped={grouped} onCardClick={setSelectedTask} onStatusChange={handleStatusChange} />
+
+          <div className="cancelled-section">
+            <button
+              className="cancelled-toggle"
+              onClick={() => setShowCancelled(v => !v)}
+              aria-expanded={showCancelled}
+            >
+              <span>{showCancelled ? '▾' : '▸'}</span>
+              <span>Cancelled</span>
+              <span className="column-count">{cancelledTasks.length}</span>
+            </button>
+            {showCancelled && cancelledTasks.length > 0 && (
+              <div className="cancelled-list">
+                {cancelledTasks.map(t => (
+                  <div key={t.id} className="cancelled-row" onClick={() => setSelectedTask(t)}>
+                    <span>TSK-{t.id}</span>
+                    <span className="cancelled-row-name">{t.name}</span>
+                    {t.project_name && <span className="badge project">{t.project_name}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
 

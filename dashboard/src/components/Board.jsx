@@ -3,9 +3,9 @@ import Card from './Card.jsx';
 
 const STATUS_COLORS = {
   'Backlog': 'var(--text-muted)',
-  'Brainstorming': '#d2a8ff',
-  'In Progress': 'var(--high)',
-  'In Review': '#58a6ff',
+  'Planning': '#d2a8ff',
+  'Building': 'var(--high)',
+  'Review': '#58a6ff',
   'Done': 'var(--done)',
   'Cancelled': 'var(--cancelled)',
 };

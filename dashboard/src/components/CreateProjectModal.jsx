@@ -3,7 +3,7 @@ import { api } from '../hooks/useApi.js';
 
 export default function CreateProjectModal({ onClose, onCreate }) {
   const [form, setForm] = useState({
-    name: '', description: '', status: 'Active', category: '', priority: 'P2', repo_url: '',
+    name: '', slug: '', description: '', status: 'Active', category: '', priority: 'P2', repo_url: '',
   });
 
   const handleSubmit = async (e) => {
@@ -23,6 +23,10 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           <div className="form-group">
             <label>Name</label>
             <input autoFocus value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Project name" />
+          </div>
+          <div className="form-group">
+            <label>Slug <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional — auto from name)</span></label>
+            <input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder="e.g. agentboard" style={{ fontFamily: 'monospace' }} />
           </div>
           <div className="form-group">
             <label>Description</label>

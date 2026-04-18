@@ -1,5 +1,14 @@
 import React from 'react';
 
+const STAGE_ICON = {
+  design: '☯',
+  plan:   '✎',
+  impl:   '◉',
+  review: '⌕',
+  ship:   '⇧',
+  qa:     '✓',
+};
+
 export default function Card({ task, onClick }) {
   const handleDragStart = (e) => {
     e.dataTransfer.setData('taskId', task.id.toString());
@@ -31,6 +40,21 @@ export default function Card({ task, onClick }) {
         {task.project_name && <span className="badge project">{task.project_name}</span>}
         {task.size && <span className="badge size">{task.size}</span>}
         {task.rounds > 0 && <span className="badge rounds" title={`${task.rounds} round(s) of iteration`}>R{task.rounds}</span>}
+        {task.pipeline_stage && (
+          <span className="badge stage" title={`pipeline_stage: ${task.pipeline_stage}`}>
+            {STAGE_ICON[task.pipeline_stage] || ''} {task.pipeline_stage}
+          </span>
+        )}
+        {task.pr_url && (
+          <a
+            href={task.pr_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="badge pr"
+            title={task.pr_url}
+            onClick={(e) => e.stopPropagation()}
+          >PR</a>
+        )}
         {labels.map((l) => <span key={l} className="badge label">{l}</span>)}
       </div>
     </div>

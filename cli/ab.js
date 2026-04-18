@@ -249,7 +249,24 @@ const commands = {
       die(`Project '${project.name}' repo_url points to missing path: ${repoPath}`);
     }
 
-    // 2. Preflight: repo must be clean
+    // 2. Preflight: repo must be clean.
+    // Ensure the repo's local exclude list ignores .worktrees/ so subsequent
+    // claims don't see their own earlier worktrees as "uncommitted changes".
+    try {
+      let repoRootForExclude;
+      try { repoRootForExclude = gitRepoRoot(repoPath); } catch { repoRootForExclude = null; }
+      if (repoRootForExclude) {
+        const excludeFile = join(repoRootForExclude, '.git', 'info', 'exclude');
+        if (existsSync(excludeFile)) {
+          const { readFileSync } = await import('fs');
+          const cur = readFileSync(excludeFile, 'utf8');
+          if (!cur.split('\n').some(l => l.trim() === '.worktrees/' || l.trim() === '/.worktrees/')) {
+            appendFileSync(excludeFile, (cur.endsWith('\n') ? '' : '\n') + '.worktrees/\n');
+          }
+        }
+      }
+    } catch { /* best effort, keep going */ }
+
     let porcelain;
     try {
       porcelain = gitPorcelain(repoPath);

@@ -189,6 +189,8 @@ button, .card, .tab, .cancelled-row, .project-card {
   font-weight: 500;
   margin-bottom: 6px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .card-meta {

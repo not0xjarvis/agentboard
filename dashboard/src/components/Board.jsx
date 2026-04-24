@@ -10,7 +10,7 @@ const STATUS_COLORS = {
   'Cancelled': 'var(--cancelled)',
 };
 
-export default function Board({ columns, grouped, onCardClick, onStatusChange }) {
+export default function Board({ columns, grouped, onCardClick, onStatusChange, hideProject }) {
   const handleDragOver = (e) => {
     e.preventDefault();
     e.currentTarget.style.background = 'rgba(88,166,255,0.05)';
@@ -44,7 +44,7 @@ export default function Board({ columns, grouped, onCardClick, onStatusChange })
             onDrop={(e) => handleDrop(e, col)}
           >
             {(grouped[col] || []).map((task) => (
-              <Card key={task.id} task={task} onClick={() => onCardClick(task)} />
+              <Card key={task.id} task={task} onClick={() => onCardClick(task)} hideProject={hideProject} />
             ))}
           </div>
         </div>

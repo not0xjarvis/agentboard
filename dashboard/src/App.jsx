@@ -9,6 +9,7 @@ import ThemeToggle from './components/ThemeToggle.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import ProjectsTable from './components/ProjectsTable.jsx';
 import { parseMentionUrl } from './components/mentionLink.js';
+import EmojiPicker from './components/EmojiPicker.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 const CANCELLED_COL = 'Cancelled';
@@ -37,6 +38,7 @@ export default function App() {
   const [projectsView, setProjectsView] = useState(loadProjectsView);
   // Nav target from an @-mention link. { projectId, noteId? } or null.
   const [mentionTarget, setMentionTarget] = useState(null);
+  const [iconPicker, setIconPicker] = useState(null); // { projectId, rect } for the grid card picker
 
   useEffect(() => {
     try { localStorage.setItem(PROJECTS_VIEW_KEY, projectsView); } catch { /* ignore */ }
@@ -65,6 +67,25 @@ export default function App() {
   const handleTaskCreated = () => { setShowCreate(false); load(); };
   const handleProjectCreated = () => { setShowCreateProject(false); load(); };
   const handleTaskUpdated = () => { setSelectedTask(null); load(); };
+
+  const handleCardIconClick = (e, projectId) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setIconPicker({ projectId, rect });
+  };
+  const handleCardIconPick = async (emoji) => {
+    if (!iconPicker) return;
+    const pid = iconPicker.projectId;
+    setIconPicker(null);
+    // Optimistic update so the card doesn't flicker
+    setProjects((prev) => prev.map(p => p.id === pid ? { ...p, icon: emoji } : p));
+    try {
+      await api.updateProject(pid, { icon: emoji });
+    } catch {
+      // Refetch on failure to reconcile
+      load();
+    }
+  };
 
   const nav = (v) => {
     setSelectedProject(null);
@@ -172,7 +193,18 @@ export default function App() {
               {projects.map(p => (
                 <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
                   <div className="project-card-header">
-                    <span className="project-card-name">{p.name}</span>
+                    <div className="project-card-title">
+                      <button
+                        type="button"
+                        className={`icon-slot${p.icon ? ' has-icon' : ''}`}
+                        onClick={(e) => handleCardIconClick(e, p.id)}
+                        aria-label={p.icon ? `Change icon (currently ${p.icon})` : 'Pick icon'}
+                        title="Pick icon"
+                      >
+                        {p.icon || <span className="icon-slot-placeholder" aria-hidden>▢</span>}
+                      </button>
+                      <span className="project-card-name">{p.name}</span>
+                    </div>
                     <span className={`badge priority-${p.priority === 'P0' ? 'urgent' : p.priority === 'P1' ? 'high' : p.priority === 'P2' ? 'medium' : 'low'}`}>{p.priority}</span>
                   </div>
                   <div className="project-card-desc">{p.description || 'No description'}</div>
@@ -240,6 +272,15 @@ export default function App() {
       )}
       {showCreateProject && (
         <CreateProjectModal onClose={() => setShowCreateProject(false)} onCreate={handleProjectCreated} />
+      )}
+
+      {iconPicker && (
+        <EmojiPicker
+          anchorRect={iconPicker.rect}
+          currentIcon={projects.find(p => p.id === iconPicker.projectId)?.icon || null}
+          onClose={() => setIconPicker(null)}
+          onPick={handleCardIconPick}
+        />
       )}
 
       <BottomNav current={view} onNav={nav} />

@@ -5,6 +5,7 @@ import Card from './Card.jsx';
 import TaskModal from './TaskModal.jsx';
 import ProjectNotes from './ProjectNotes.jsx';
 import BottomNav from './BottomNav.jsx';
+import EmojiPicker from './EmojiPicker.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 
@@ -20,6 +21,7 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
   // If we landed here from an @-mention pointing at a specific note, open the Notes tab.
   const [tab, setTab] = useState(initialNoteId ? 'notes' : 'tasks');
   const [activity, setActivity] = useState([]);
+  const [iconPickerRect, setIconPickerRect] = useState(null);
   const descSaveTimeout = useRef(null);
 
   const load = useCallback(async () => {
@@ -68,6 +70,20 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
     load();
   };
 
+  const handleIconSlotClick = (e) => {
+    e.stopPropagation();
+    setIconPickerRect(e.currentTarget.getBoundingClientRect());
+  };
+  const handleIconPick = async (emoji) => {
+    setIconPickerRect(null);
+    setProject((p) => ({ ...p, icon: emoji }));
+    try {
+      await api.updateProject(project.id, { icon: emoji });
+    } catch {
+      load();
+    }
+  };
+
   // Kanban grouped by column for the Tasks tab
   const grouped = {};
   for (const col of COLUMNS) grouped[col] = [];
@@ -82,6 +98,15 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
         <div className="project-header-left">
           <div className="project-header-title-row">
             <button className="btn btn-sm" onClick={onBack}>← Back</button>
+            <button
+              type="button"
+              className={`icon-slot icon-slot--header${project.icon ? ' has-icon' : ''}`}
+              onClick={handleIconSlotClick}
+              aria-label={project.icon ? `Change icon (currently ${project.icon})` : 'Pick icon'}
+              title="Pick icon"
+            >
+              {project.icon || <span className="icon-slot-placeholder" aria-hidden>▢</span>}
+            </button>
             <h1>{project.name}</h1>
           </div>
           <div className="project-header-badge-row">
@@ -190,6 +215,15 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
 
       {selectedTask && (
         <TaskModal task={selectedTask} projects={projects} onClose={() => setSelectedTask(null)} onUpdate={handleTaskUpdated} />
+      )}
+
+      {iconPickerRect && (
+        <EmojiPicker
+          anchorRect={iconPickerRect}
+          currentIcon={project.icon || null}
+          onClose={() => setIconPickerRect(null)}
+          onPick={handleIconPick}
+        />
       )}
 
       {onNavigate && <BottomNav current="projects" onNav={onNavigate} />}

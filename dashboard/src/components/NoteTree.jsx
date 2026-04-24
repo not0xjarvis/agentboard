@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
+import EmojiPicker from './EmojiPicker.jsx';
 
 // Build a tree from a flat array of notes.
 function buildTree(notes) {
@@ -37,6 +38,7 @@ function NoteNode({
   onRename,
   onDelete,
   onMove,
+  onIconClick,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -102,6 +104,15 @@ function NoteNode({
         >
           {isExpanded ? '▾' : '▸'}
         </button>
+        <button
+          type="button"
+          className={`icon-slot icon-slot--tree${node.icon ? ' has-icon' : ''}`}
+          onClick={(e) => { e.stopPropagation(); onIconClick(node, e.currentTarget.getBoundingClientRect()); }}
+          aria-label={node.icon ? `Change icon (currently ${node.icon})` : 'Pick icon'}
+          title="Pick icon"
+        >
+          {node.icon || <span className="icon-slot-placeholder" aria-hidden>▢</span>}
+        </button>
         {renaming ? (
           <input
             autoFocus
@@ -158,6 +169,7 @@ function NoteNode({
               onRename={onRename}
               onDelete={onDelete}
               onMove={onMove}
+              onIconClick={onIconClick}
             />
           ))}
         </div>
@@ -177,9 +189,21 @@ export default function NoteTree({
   onRename,
   onDelete,
   onMove,
+  onSetIcon,
 }) {
   const tree = buildTree(notes);
   const [rootDragOver, setRootDragOver] = useState(false);
+  const [iconPicker, setIconPicker] = useState(null); // { noteId, icon, rect }
+
+  const handleIconClick = (node, rect) => {
+    setIconPicker({ noteId: node.id, icon: node.icon || null, rect });
+  };
+  const handleIconPick = (emoji) => {
+    if (!iconPicker) return;
+    const id = iconPicker.noteId;
+    setIconPicker(null);
+    onSetIcon?.(id, emoji);
+  };
 
   return (
     <div
@@ -221,12 +245,21 @@ export default function NoteTree({
             onRename={onRename}
             onDelete={onDelete}
             onMove={onMove}
+            onIconClick={handleIconClick}
           />
         ))
       )}
       <button type="button" className="note-tree-add-root" onClick={onAddRoot}>
         + Add note
       </button>
+      {iconPicker && (
+        <EmojiPicker
+          anchorRect={iconPicker.rect}
+          currentIcon={iconPicker.icon}
+          onClose={() => setIconPicker(null)}
+          onPick={handleIconPick}
+        />
+      )}
     </div>
   );
 }

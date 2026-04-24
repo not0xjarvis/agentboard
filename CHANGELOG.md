@@ -2,6 +2,20 @@
 
 ## [0.3.0] — 2026-04-24
 
+### Mobile navigation + editable project description
+
+Opening a project on mobile was a trap. The top tabs (Board / My Focus / Agent Queue / Projects) disappeared, leaving only a tiny `← Back` button buried inside a row of badges. Getting back to the main board took two taps at best, and new users never found the back button at all.
+
+Also: once a project was created, there was no way to edit its description from the UI. Only notes were editable.
+
+Fixed both. On phones (≤640px), a persistent bottom nav replaces the top tabs — Board / Focus / Agents / Projects, always visible, always one tap away, even from inside a project. The project detail header splits the title row (Back + name) from the badge row (slug, status, category, priority) so nothing collides on a 375px screen. Description is now an editable textarea on the Notes tab with debounced auto-save, same pattern as notes. Desktop layout unchanged.
+
+- **Bottom nav (mobile only):** 4-button fixed strip with safe-area padding. Top tabs hidden on `≤640px`; shown again on desktop.
+- **Cross-context nav:** tapping Board from inside a project clears the project and jumps straight to the main board. No more "back then tab."
+- **Header reflow:** project name gets its own row. Badges wrap onto a second row instead of crowding the name.
+- **Editable description:** Notes tab now shows Description as a 2-row textarea above the markdown editor. 800ms debounce, saves via the existing `PUT /api/projects/:id`.
+- **Saving indicator:** shared between notes and description, rendered next to whichever field you're editing.
+
 ### Notion-grade markdown editor + light mode
 
 The Notes pane in the project drawer was a plain textarea. Markdown was stored but never rendered. Typing `# Header` showed `# Header`, not a header. If you came from Notion, the regression was the main thing keeping you on Notion.

@@ -163,4 +163,49 @@ if (!taskCols2.includes('pipeline_stage')) {
   }
 }
 
+// --- v0.4.0: nested project notes (TSK-25) ---
+//
+// A project can now have a tree of notes. The existing projects.notes column
+// is preserved for rollback; on first boot after upgrade we migrate any
+// non-empty projects.notes into a root-level project_notes row.
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS project_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    parent_id INTEGER REFERENCES project_notes(id) ON DELETE CASCADE,
+    title TEXT NOT NULL DEFAULT 'Untitled',
+    content TEXT NOT NULL DEFAULT '',
+    position REAL NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_project_notes_project ON project_notes(project_id);
+  CREATE INDEX IF NOT EXISTS idx_project_notes_parent ON project_notes(parent_id);
+  CREATE INDEX IF NOT EXISTS idx_project_notes_position ON project_notes(project_id, parent_id, position);
+`);
+
+// Idempotent seed: for each project with non-empty notes AND zero rows in
+// project_notes for that project, insert a single root note. Subsequent runs
+// see non-zero count and skip.
+{
+  const seed = db.transaction(() => {
+    const projects = db.prepare(
+      "SELECT id, notes FROM projects WHERE notes IS NOT NULL AND TRIM(notes) != ''"
+    ).all();
+    const existing = db.prepare(
+      'SELECT COUNT(*) AS n FROM project_notes WHERE project_id = ?'
+    );
+    const insert = db.prepare(
+      `INSERT INTO project_notes (project_id, parent_id, title, content, position)
+       VALUES (?, NULL, 'Notes', ?, 0)`
+    );
+    for (const p of projects) {
+      const { n } = existing.get(p.id);
+      if (n === 0) insert.run(p.id, p.notes);
+    }
+  });
+  seed();
+}
+
 export default db;

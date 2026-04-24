@@ -44,4 +44,12 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return request(`/worktrees${qs ? '?' + qs : ''}`);
   },
+
+  // v0.4.0: nested project notes (TSK-25)
+  listNotes: (projectId) => request(`/projects/${projectId}/notes`),
+  getNote: (id) => request(`/notes/${id}`),
+  createNote: (projectId, body) => request(`/projects/${projectId}/notes`, { method: 'POST', body }),
+  updateNote: (id, body) => request(`/notes/${id}`, { method: 'PUT', body }),
+  deleteNote: (id) => request(`/notes/${id}`, { method: 'DELETE' }),
+  moveNote: (id, body) => request(`/notes/${id}/move`, { method: 'POST', body }),
 };

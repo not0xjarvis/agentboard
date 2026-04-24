@@ -315,6 +315,188 @@ app.delete('/api/tasks/:id/worktree', (req, res) => {
   res.json(updated);
 });
 
+// --- Project notes (nested sub-pages) ---
+//
+// Tree of notes per project. Flat list returned — client builds the tree
+// from parent_id. `position` is a float so reorders don't require a full
+// renumber (insert between two nodes by averaging their positions).
+
+// Defense-in-depth: reject a reparent that would create a cycle. Walks up
+// the chain from the proposed new parent; if we hit the node itself, it's
+// a descendant of `noteId` and the move must be rejected.
+function wouldCreateCycle(noteId, newParentId) {
+  if (newParentId == null) return false;
+  if (Number(newParentId) === Number(noteId)) return true;
+  const getParent = db.prepare(
+    'SELECT parent_id, project_id FROM project_notes WHERE id = ?'
+  );
+  let cur = getParent.get(newParentId);
+  let guard = 0;
+  while (cur && cur.parent_id != null) {
+    if (Number(cur.parent_id) === Number(noteId)) return true;
+    if (++guard > 1000) return true; // pathological; treat as cycle
+    cur = getParent.get(cur.parent_id);
+  }
+  return false;
+}
+
+app.get('/api/projects/:id/notes', (req, res) => {
+  const project = db.prepare('SELECT id FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'project not found' });
+  const rows = db.prepare(
+    `SELECT id, project_id, parent_id, title, content, position, created_at, updated_at
+       FROM project_notes
+      WHERE project_id = ?
+      ORDER BY position, id`
+  ).all(req.params.id);
+  res.json(rows);
+});
+
+app.post('/api/projects/:id/notes', (req, res) => {
+  const project = db.prepare('SELECT id FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'project not found' });
+  const { title, parent_id, content, position } = req.body || {};
+
+  // Validate parent: must exist and belong to this project.
+  if (parent_id != null) {
+    const parent = db.prepare(
+      'SELECT id, project_id FROM project_notes WHERE id = ?'
+    ).get(parent_id);
+    if (!parent) return res.status(400).json({ error: 'parent_id not found' });
+    if (parent.project_id !== project.id) {
+      return res.status(400).json({ error: 'parent_id belongs to a different project' });
+    }
+  }
+
+  // Compute default position (max + 1 among siblings) if not provided.
+  let pos = position;
+  if (typeof pos !== 'number') {
+    const row = db.prepare(
+      `SELECT COALESCE(MAX(position), -1) AS m
+         FROM project_notes
+        WHERE project_id = ? AND (parent_id IS ?)`
+    ).get(project.id, parent_id == null ? null : Number(parent_id));
+    pos = Number(row.m) + 1;
+  }
+
+  const result = db.prepare(
+    `INSERT INTO project_notes (project_id, parent_id, title, content, position)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(
+    project.id,
+    parent_id == null ? null : Number(parent_id),
+    (title && String(title).trim()) || 'Untitled',
+    content || '',
+    pos
+  );
+  const note = db.prepare('SELECT * FROM project_notes WHERE id = ?').get(result.lastInsertRowid);
+  res.status(201).json(note);
+});
+
+app.get('/api/notes/:id', (req, res) => {
+  const note = db.prepare('SELECT * FROM project_notes WHERE id = ?').get(req.params.id);
+  note ? res.json(note) : res.status(404).json({ error: 'not found' });
+});
+
+app.put('/api/notes/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const cur = db.prepare('SELECT * FROM project_notes WHERE id = ?').get(id);
+  if (!cur) return res.status(404).json({ error: 'not found' });
+
+  const body = req.body || {};
+  const fields = [];
+  const values = [];
+
+  if (body.title !== undefined) {
+    fields.push('title = ?');
+    values.push((String(body.title).trim()) || 'Untitled');
+  }
+  if (body.content !== undefined) {
+    fields.push('content = ?');
+    values.push(String(body.content));
+  }
+  if (body.position !== undefined) {
+    if (typeof body.position !== 'number' || Number.isNaN(body.position)) {
+      return res.status(400).json({ error: 'position must be a number' });
+    }
+    fields.push('position = ?');
+    values.push(body.position);
+  }
+  if (body.parent_id !== undefined) {
+    const newParent = body.parent_id == null ? null : Number(body.parent_id);
+    if (newParent != null) {
+      const parent = db.prepare(
+        'SELECT id, project_id FROM project_notes WHERE id = ?'
+      ).get(newParent);
+      if (!parent) return res.status(400).json({ error: 'parent_id not found' });
+      if (parent.project_id !== cur.project_id) {
+        return res.status(400).json({ error: 'parent_id belongs to a different project' });
+      }
+      if (wouldCreateCycle(id, newParent)) {
+        return res.status(400).json({ error: 'move would create a cycle' });
+      }
+    }
+    fields.push('parent_id = ?');
+    values.push(newParent);
+  }
+
+  if (!fields.length) return res.status(400).json({ error: 'nothing to update' });
+  fields.push("updated_at = datetime('now')");
+  values.push(id);
+  db.prepare(`UPDATE project_notes SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+
+  const note = db.prepare('SELECT * FROM project_notes WHERE id = ?').get(id);
+  res.json(note);
+});
+
+app.delete('/api/notes/:id', (req, res) => {
+  const info = db.prepare('DELETE FROM project_notes WHERE id = ?').run(req.params.id);
+  if (info.changes === 0) return res.status(404).json({ error: 'not found' });
+  res.status(204).end();
+});
+
+// Convenience: move = parent_id + position in one call. Same semantics as PUT.
+app.post('/api/notes/:id/move', (req, res) => {
+  const id = Number(req.params.id);
+  const cur = db.prepare('SELECT * FROM project_notes WHERE id = ?').get(id);
+  if (!cur) return res.status(404).json({ error: 'not found' });
+
+  const { parent_id, position } = req.body || {};
+  const newParent = parent_id === undefined ? cur.parent_id : (parent_id == null ? null : Number(parent_id));
+
+  if (newParent != null) {
+    const parent = db.prepare(
+      'SELECT id, project_id FROM project_notes WHERE id = ?'
+    ).get(newParent);
+    if (!parent) return res.status(400).json({ error: 'parent_id not found' });
+    if (parent.project_id !== cur.project_id) {
+      return res.status(400).json({ error: 'parent_id belongs to a different project' });
+    }
+    if (wouldCreateCycle(id, newParent)) {
+      return res.status(400).json({ error: 'move would create a cycle' });
+    }
+  }
+
+  let pos = position;
+  if (typeof pos !== 'number') {
+    const row = db.prepare(
+      `SELECT COALESCE(MAX(position), -1) AS m
+         FROM project_notes
+        WHERE project_id = ? AND (parent_id IS ?) AND id != ?`
+    ).get(cur.project_id, newParent, id);
+    pos = Number(row.m) + 1;
+  }
+
+  db.prepare(
+    `UPDATE project_notes
+        SET parent_id = ?, position = ?, updated_at = datetime('now')
+      WHERE id = ?`
+  ).run(newParent, pos, id);
+
+  const note = db.prepare('SELECT * FROM project_notes WHERE id = ?').get(id);
+  res.json(note);
+});
+
 // --- Comments ---
 
 app.get('/api/tasks/:id/comments', (req, res) => {

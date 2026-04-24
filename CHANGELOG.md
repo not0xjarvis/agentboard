@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.6.0] — 2026-04-24
+
+### @-mention cross-page links in notes
+
+Notion has `@` to link between pages; AB's notes didn't. If you were writing a design doc in SelfStack and wanted to reference a note in AgentBoard, you had to paste a URL and remember that project existed. Fixed.
+
+Type `@` in any note and a search popover appears. Keep typing to filter across every project and every note in the database. Arrow keys move the selection, Enter (or Tab) inserts, Escape closes without inserting. The inserted mention is a plain markdown link (`[AgentBoard](/ab/projects/agentboard)`), so your notes stay portable — if you ever export, nothing breaks.
+
+On reload those `/ab/...` links render as subtle chips instead of raw links: accent-subtle background, rounded border, full color on hover. Click a chip and AB navigates straight to the target project (or the specific note, if the chip points at one). No reloads, no URL juggling.
+
+- **Popover:** floats over the caret, flips above if it would clip the viewport, and closes when you backspace past the `@`.
+- **Search ranking:** prefix matches first (typing `ag` surfaces AgentBoard before any note containing "cage"), then shorter titles first.
+- **Boundary-aware:** only triggers on word boundaries. `me@example.com` doesn't open the popover. Neither does `@` inside a code block or inline code.
+- **No matches:** popover shows a "No matches" hint instead of disappearing, so you know search is live.
+- **Note mentions:** show the parent project name in muted text so "Design" in AgentBoard and "Design" in SelfStack are easy to distinguish.
+- **Theme:** chips and popover inherit AB CSS variables — both light and dark modes look right.
+
+### API
+
+One new endpoint:
+
+```
+GET /api/search?q=<term>&limit=20
+```
+
+Returns `{ projects: [{id, slug, name}], notes: [{id, project_id, project_slug, project_name, title}] }`. LIKE search over `projects.name` and `project_notes.title`, ordered by match position (prefix > substring) then title length. `limit` splits evenly across the two types and clamps to 50 total. Empty query returns empty arrays.
+
 ## [0.5.0] — 2026-04-24
 
 ### Projects table view

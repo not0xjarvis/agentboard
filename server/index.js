@@ -60,7 +60,7 @@ app.post('/api/projects', (req, res) => {
 });
 
 app.put('/api/projects/:id', (req, res) => {
-  const fields = ['name', 'description', 'notes', 'status', 'category', 'priority', 'repo_url', 'slug'];
+  const fields = ['name', 'description', 'notes', 'status', 'category', 'priority', 'repo_url', 'slug', 'icon'];
   const updates = [];
   const values = [];
   for (const f of fields) {
@@ -344,7 +344,7 @@ app.get('/api/projects/:id/notes', (req, res) => {
   const project = db.prepare('SELECT id FROM projects WHERE id = ?').get(req.params.id);
   if (!project) return res.status(404).json({ error: 'project not found' });
   const rows = db.prepare(
-    `SELECT id, project_id, parent_id, title, content, position, created_at, updated_at
+    `SELECT id, project_id, parent_id, title, content, position, icon, created_at, updated_at
        FROM project_notes
       WHERE project_id = ?
       ORDER BY position, id`
@@ -414,6 +414,12 @@ app.put('/api/notes/:id', (req, res) => {
   if (body.content !== undefined) {
     fields.push('content = ?');
     values.push(String(body.content));
+  }
+  if (body.icon !== undefined) {
+    // Nullable; empty string also clears the icon.
+    const raw = body.icon == null ? null : String(body.icon);
+    fields.push('icon = ?');
+    values.push(raw && raw.length ? raw : null);
   }
   if (body.position !== undefined) {
     if (typeof body.position !== 'number' || Number.isNaN(body.position)) {
@@ -524,6 +530,43 @@ app.get('/api/projects/:id/activity', (req, res) => {
       LIMIT 100`
   ).all(req.params.id);
   res.json(rows);
+});
+
+// --- Cross-page search (for @-mentions) ---
+//
+// Single query over projects.name and project_notes.title. `limit` caps the
+// total, split evenly across the two types. Ordered by match position first
+// (prefix > substring), then length (shorter = more specific).
+
+app.get('/api/search', (req, res) => {
+  const q = String(req.query.q || '').trim();
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
+
+  if (!q) return res.json({ projects: [], notes: [] });
+
+  // Escape LIKE wildcards so a query like "50%" doesn't become a wildcard.
+  const escaped = q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+  const like = `%${escaped}%`;
+  const half = Math.ceil(limit / 2);
+
+  const projects = db.prepare(
+    `SELECT id, slug, name
+       FROM projects
+      WHERE name LIKE ? ESCAPE '\\'
+      ORDER BY INSTR(LOWER(name), LOWER(?)), LENGTH(name), name
+      LIMIT ?`
+  ).all(like, q, half);
+
+  const notes = db.prepare(
+    `SELECT n.id, n.project_id, n.title, p.slug AS project_slug, p.name AS project_name
+       FROM project_notes n
+       JOIN projects p ON n.project_id = p.id
+      WHERE n.title LIKE ? ESCAPE '\\'
+      ORDER BY INSTR(LOWER(n.title), LOWER(?)), LENGTH(n.title), n.title
+      LIMIT ?`
+  ).all(like, q, half);
+
+  res.json({ projects, notes });
 });
 
 // --- Health ---

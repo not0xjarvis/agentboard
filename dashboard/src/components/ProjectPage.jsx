@@ -8,7 +8,7 @@ import BottomNav from './BottomNav.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 
-export default function ProjectPage({ project: initialProject, onBack, onTaskClick, onNavigate }) {
+export default function ProjectPage({ project: initialProject, onBack, onTaskClick, onNavigate, onMentionNavigate, initialNoteId }) {
   const [project, setProject] = useState(initialProject);
   const [tasks, setTasks] = useState([]);
   const [description, setDescription] = useState(initialProject.description || '');
@@ -17,7 +17,8 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
   const [projects, setProjects] = useState([]);
-  const [tab, setTab] = useState('tasks');
+  // If we landed here from an @-mention pointing at a specific note, open the Notes tab.
+  const [tab, setTab] = useState(initialNoteId ? 'notes' : 'tasks');
   const [activity, setActivity] = useState([]);
   const descSaveTimeout = useRef(null);
 
@@ -158,7 +159,11 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
               rows={2}
             />
           </div>
-          <ProjectNotes project={project} />
+          <ProjectNotes
+            project={project}
+            onMentionNavigate={onMentionNavigate}
+            initialNoteId={initialNoteId}
+          />
         </div>
       )}
 

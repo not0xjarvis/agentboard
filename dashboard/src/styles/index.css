@@ -427,6 +427,138 @@ button, .card, .tab, .cancelled-row, .project-card {
 .project-card-name { font-size: 14px; font-weight: 600; }
 .project-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
 
+/* Projects view shell (wraps grid + table + toggle) */
+.projects-view { padding: 16px 20px 20px; }
+
+.projects-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.view-toggle-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  font-weight: 500;
+}
+
+.view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--border); }
+.view-toggle-btn:hover { color: var(--text); background: var(--surface-hover); }
+.view-toggle-btn.active {
+  color: #fff;
+  background: var(--accent);
+}
+
+.projects-empty {
+  padding: 40px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Projects table */
+.projects-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: auto;
+  background: var(--surface);
+}
+
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.projects-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.projects-table thead th:hover { color: var(--text); }
+.projects-table thead th.is-sorted { color: var(--text); }
+
+.projects-table-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.projects-table-sort {
+  font-size: 9px;
+  color: var(--accent);
+}
+
+.projects-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.projects-table tbody tr + tr td { border-top: 1px solid var(--border); }
+.projects-table tbody tr:hover td { background: var(--surface-hover); }
+
+.projects-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects-table .col-name { font-weight: 500; color: var(--text); }
+
+.projects-table-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects-table .col-muted { color: var(--text-muted); }
+
+.projects-table .col-repo a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.projects-table .col-repo a:hover { color: var(--accent); text-decoration: underline; }
+
+/* Column widths — flexible but biased toward name + repo */
+.projects-table col,
+.projects-table th:nth-child(1), .projects-table td:nth-child(1) { width: 24%; min-width: 160px; }
+.projects-table th:nth-child(2), .projects-table td:nth-child(2) { width: 10%; min-width: 80px; }
+.projects-table th:nth-child(3), .projects-table td:nth-child(3) { width: 10%; min-width: 90px; }
+.projects-table th:nth-child(4), .projects-table td:nth-child(4) { width: 14%; min-width: 110px; }
+.projects-table th:nth-child(5), .projects-table td:nth-child(5) { width: 10%; min-width: 90px; }
+.projects-table th:nth-child(6), .projects-table td:nth-child(6) { width: 20%; min-width: 140px; }
+.projects-table th:nth-child(7), .projects-table td:nth-child(7) { width: 12%; min-width: 100px; }
+
 /* Project detail layout */
 .project-layout {
   display: grid;
@@ -873,6 +1005,16 @@ button, .card, .tab, .cancelled-row, .project-card {
   /* Projects grid: single column */
   .projects-grid { grid-template-columns: 1fr; gap: 10px; }
   .project-card { padding: 14px; }
+
+  /* Projects view: tighten padding, larger tap targets on toggle */
+  .projects-view { padding: 12px; }
+  .view-toggle-btn { padding: 8px 14px; font-size: 13px; min-height: 36px; }
+
+  /* Table: allow horizontal scroll on phones, keep header sticky */
+  .projects-table-wrap { -webkit-overflow-scrolling: touch; }
+  .projects-table { font-size: 13px; }
+  .projects-table thead th { padding: 10px; }
+  .projects-table td { padding: 10px; }
 
   /* Cancelled section: tighten */
   .cancelled-section { padding: 8px 12px 14px; }

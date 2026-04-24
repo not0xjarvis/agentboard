@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0] — 2026-04-24
+
+### Projects table view
+
+You can now scan projects as a sortable table instead of grid cards. Useful when you have more than a handful of projects and want to compare priority, status, or last-touched time at a glance.
+
+- **Table view:** Projects tab gains a Grid / Table toggle above the list. Table shows Name, Priority, Status, Category, Repo, and Last Activity as columns. Click any header to sort, click again to reverse. Your view and sort choice persist across reloads.
+- **Defaults:** Grid stays the default for first-time visitors. Default sort is most recently updated first. Empty values sort to the bottom regardless of direction.
+- **Clickable rows:** clicking a row opens the project detail page just like clicking a card. Repo links open in a new tab without navigating away.
+- **Mobile:** the table scrolls horizontally on narrow screens with a sticky header so the column labels stay visible.
+- **Theme:** table inherits AB CSS variables so light and dark modes both work.
+
 ## [0.4.0] — 2026-04-24
 
 ### Nested sub-pages per project

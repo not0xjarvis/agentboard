@@ -5,6 +5,7 @@ import TaskModal from './components/TaskModal.jsx';
 import CreateTaskModal from './components/CreateTaskModal.jsx';
 import CreateProjectModal from './components/CreateProjectModal.jsx';
 import ProjectPage from './components/ProjectPage.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 const CANCELLED_COL = 'Cancelled';
@@ -69,6 +70,7 @@ export default function App() {
       <div className="header">
         <h1>AgentBoard</h1>
         <div className="header-actions">
+          <ThemeToggle />
           <button className="btn btn-sm" onClick={() => setShowCreateProject(true)}>+ Project</button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>+ Task</button>
         </div>

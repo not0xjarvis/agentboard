@@ -561,6 +561,68 @@ const commands = {
     console.log(`Updated TSK-${task.id}: status=${task.status}, assignee=${task.assignee}`);
   },
 
+  // Flag a task as needing a human decision. The agent writes the question,
+  // the flag surfaces the task in the Focus tab. Status stays unchanged.
+  async block() {
+    const id = process.argv[3];
+    const question = process.argv[4];
+    if (!id || !question) {
+      return console.log('Usage: ab block <task_id> "question for the human"');
+    }
+    const task = await req(`/tasks/${id}`, {
+      method: 'PUT',
+      body: { needs_decision: 1, decision_question: question },
+    });
+    // Log the question as a comment so it shows in the task history
+    await req(`/tasks/${id}/comments`, {
+      method: 'POST',
+      body: { content: `[Decision requested] ${question}`, author: 'Agent' },
+    });
+    console.log(`Blocked TSK-${task.id} on decision. Visible in Focus tab.`);
+  },
+
+  // Clear the decision flag. Optional --answer records it as a comment first.
+  async unblock() {
+    const id = process.argv[3];
+    if (!id) return console.log('Usage: ab unblock <task_id> [--answer "human response"]');
+    const flags = parseFlags(process.argv.slice(4));
+    if (flags.answer && flags.answer !== true) {
+      await req(`/tasks/${id}/comments`, {
+        method: 'POST',
+        body: { content: flags.answer, author: 'Human' },
+      });
+    }
+    const task = await req(`/tasks/${id}`, {
+      method: 'PUT',
+      body: { needs_decision: 0, decision_question: null },
+    });
+    console.log(`Unblocked TSK-${task.id}. Agent can resume.`);
+  },
+
+  // List what's in the Focus queue. Shows decisions first, then human to-dos.
+  async focus() {
+    const tasks = await req('/tasks?focus=1');
+    if (!tasks.length) return console.log('Focus queue is empty. Nothing needs you right now.');
+    const decisions = tasks.filter(t => t.needs_decision);
+    const todos = tasks.filter(t => !t.needs_decision);
+    if (decisions.length) {
+      console.log('\n  DECISIONS (agent waiting)');
+      console.log('  ' + '─'.repeat(60));
+      for (const t of decisions) {
+        console.log(fmtTask(t));
+        if (t.decision_question) {
+          console.log(`      ? ${t.decision_question}`);
+        }
+      }
+    }
+    if (todos.length) {
+      console.log('\n  TO-DO (assigned to you)');
+      console.log('  ' + '─'.repeat(60));
+      todos.forEach(t => console.log(fmtTask(t)));
+    }
+    console.log();
+  },
+
   async comment() {
     const id = process.argv[3];
     const content = process.argv[4];
@@ -593,6 +655,11 @@ const commands = {
     ab create "name" [--flags]           Create a task
     ab update <id> --field value         Update any field (incl. pr_url, pipeline_stage, worktree_path, branch_name)
     ab comment <id> "message"            Add a comment
+
+  FOCUS QUEUE (decisions blocking agents + human to-dos)
+    ab focus                             List what's waiting on you
+    ab block <id> "question"             Agent flags a task for human decision
+    ab unblock <id> [--answer "..."]     Clear the flag (optionally record the answer)
 
   NOTES (nested sub-pages per project)
     ab notes list <project-slug>             Indented tree of notes

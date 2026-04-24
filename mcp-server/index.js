@@ -101,6 +101,73 @@ server.tool('create_project', 'Create a new project', {
   return { content: [{ type: 'text', text: `Created project #${project.id}: ${project.name}` }] };
 });
 
+// --- Project notes (nested sub-pages, v0.4.0) ---
+
+server.tool(
+  'list_project_notes',
+  'List all notes for a project (flat array, build tree from parent_id)',
+  { project_id: z.number().describe('Project ID') },
+  async ({ project_id }) => {
+    const notes = await req(`/projects/${project_id}/notes`);
+    return { content: [{ type: 'text', text: JSON.stringify(notes, null, 2) }] };
+  }
+);
+
+server.tool(
+  'create_note',
+  'Create a note under a project. Pass parent_id to create a child note.',
+  {
+    project_id: z.number().describe('Project ID'),
+    title: z.string().optional().describe('Note title (default: Untitled)'),
+    content: z.string().optional().describe('Markdown content'),
+    parent_id: z.number().optional().describe('Parent note ID for a child note'),
+  },
+  async ({ project_id, title, content, parent_id }) => {
+    const body = {};
+    if (title) body.title = title;
+    if (content) body.content = content;
+    if (parent_id != null) body.parent_id = parent_id;
+    const note = await req(`/projects/${project_id}/notes`, { method: 'POST', body });
+    return { content: [{ type: 'text', text: `Created note #${note.id}: ${note.title}` }] };
+  }
+);
+
+server.tool(
+  'get_note',
+  'Get one note by ID (title, content, parent_id, position)',
+  { id: z.number().describe('Note ID') },
+  async ({ id }) => {
+    const note = await req(`/notes/${id}`);
+    return { content: [{ type: 'text', text: JSON.stringify(note, null, 2) }] };
+  }
+);
+
+server.tool(
+  'update_note',
+  'Update a note. Any subset of title, content, parent_id, position.',
+  {
+    id: z.number().describe('Note ID'),
+    title: z.string().optional(),
+    content: z.string().optional(),
+    parent_id: z.number().nullable().optional().describe('New parent; null to move to root'),
+    position: z.number().optional(),
+  },
+  async ({ id, ...updates }) => {
+    const note = await req(`/notes/${id}`, { method: 'PUT', body: updates });
+    return { content: [{ type: 'text', text: `Updated note #${note.id}: ${note.title}` }] };
+  }
+);
+
+server.tool(
+  'delete_note',
+  'Delete a note. Children are deleted via cascade.',
+  { id: z.number().describe('Note ID') },
+  async ({ id }) => {
+    await req(`/notes/${id}`, { method: 'DELETE' });
+    return { content: [{ type: 'text', text: `Deleted note #${id} (and any children).` }] };
+  }
+);
+
 // --- Start ---
 
 const transport = new StdioServerTransport();

@@ -1,5 +1,75 @@
 # Changelog
 
+## [0.4.0] — 2026-04-24
+
+### Nested sub-pages per project
+
+Projects had exactly one notes field. If you were coming from Notion with a project that had "Design", "API spec", "Competitor research", and "Pricing" as sub-pages, you had to flatten the whole thing into one markdown blob. This was the single biggest reason people stayed on Notion.
+
+Fixed. Every project now has a tree of notes. Open a project, hit the Notes tab, and there's a sidebar on the left with your pages; the Milkdown editor fills the right. Click any node to edit it. Hover any node for a `+` (add child) and `⋯` (rename, delete). Drag a note onto another to reparent. Create child notes as deep as you want. Delete a parent and the children cascade with a confirm prompt that tells you exactly how many pages you'll lose.
+
+Every selected note is reflected in the URL as `?note=<id>`, so you can bookmark a specific sub-page or share the link with another agent. Expanded/collapsed state is remembered per project in localStorage so the tree stays the way you left it.
+
+- **Tree sidebar:** 260px wide on desktop, indented by depth, chevrons for expand/collapse, accent highlight on the selected node.
+- **Mobile:** tree collapses into a slide-over sheet; a hamburger button at the top of the editor opens it. Single-column on phones; everything fits in 375px.
+- **Drag to reorder:** HTML5 drag-and-drop. Drop a note onto another to make it a child. Drop onto empty tree space to move it back to root. Cycles are rejected server-side with a clear error.
+- **URL state:** `?note=<id>` tracks the selected note. Refresh the page and the same note is still selected.
+- **Save on switch:** typing in one note then clicking another flushes the pending save before the editor swaps.
+- **Empty state:** projects with no notes show a "Create your first note" CTA instead of a blank editor.
+
+### Existing notes auto-migrate
+
+If your project already had content in the `projects.notes` column, first boot after upgrade copies it into a root-level note titled "Notes". The migration is idempotent (running twice doesn't duplicate) and leaves the original `projects.notes` column intact for rollback. Projects with empty `notes` get nothing; you create the first note yourself.
+
+### API
+
+Five new endpoints, all accept/return JSON:
+
+```
+GET    /api/projects/:id/notes      List tree as a flat array (build the tree from parent_id)
+POST   /api/projects/:id/notes      Create a note (body: title?, parent_id?, position?, content?)
+GET    /api/notes/:id               One note
+PUT    /api/notes/:id                Update any subset of title, content, parent_id, position
+DELETE /api/notes/:id                Delete (cascades to children)
+POST   /api/notes/:id/move          Reparent + reposition in one call
+```
+
+Reparenting validates that the new parent belongs to the same project and that the move wouldn't create a cycle. Position is a float so you can insert between two siblings without renumbering.
+
+### CLI
+
+```
+ab notes list <project-slug>              Indented tree
+ab notes create <slug|parent-id> "Title"  Create at root (slug) or as a child (numeric parent)
+ab notes show <id>                        Print content
+ab notes edit <id>                        Open in $EDITOR, save on exit
+ab notes rm <id> [--force]                Delete (confirms descendant count unless --force)
+ab notes mv <id> --parent <id|root>       Reparent
+```
+
+### MCP tools
+
+Five new tools matching the API: `list_project_notes`, `create_note`, `get_note`, `update_note`, `delete_note`. Agents can now build out a project's knowledge tree without touching the UI.
+
+### Itemized changes
+
+- New: `server/db.js`: `project_notes` table with `(project_id, parent_id, title, content, position, created_at, updated_at)` and three indexes; idempotent migration that copies non-empty `projects.notes` into a root note on first boot.
+- New: `server/index.js`: five REST routes plus `wouldCreateCycle` defense-in-depth check.
+- New: `dashboard/src/components/NoteTree.jsx`: recursive tree with drag-drop, chevrons, hover actions, inline rename, per-node `⋯` menu.
+- New: `dashboard/src/components/ProjectNotes.jsx`: tree + editor pair with debounced save, flush-on-switch, URL state via `?note=<id>`, localStorage-backed expand state, mobile slide-over.
+- Changed: `dashboard/src/components/ProjectPage.jsx`: Notes tab now renders `ProjectNotes` below the existing description editor; the single-textarea notes save was removed (content lives in the tree now).
+- Changed: `dashboard/src/hooks/useApi.js`: six new API helpers for notes.
+- Changed: `cli/ab.js`: `ab notes` subcommand family.
+- Changed: `mcp-server/index.js`: five new tools.
+- Changed: `dashboard/src/styles/index.css`: tree node styles, sidebar layout, mobile sheet transform, empty state.
+
+### Out of scope (deferred)
+
+- Per-note icons (TSK-26)
+- @-mentions between notes (TSK-28)
+- Block-level comments, inline database embeds, templates
+- Virtualized tree (fine at <100 nodes; revisit if anyone breaks that)
+
 ## [0.3.0] — 2026-04-24
 
 ### Mobile navigation + editable project description

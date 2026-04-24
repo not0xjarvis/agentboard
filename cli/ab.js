@@ -438,6 +438,22 @@ const commands = {
     console.log(`TSK-${task.id} stage=${task.pipeline_stage || 'none'}`);
   },
 
+  // --- NEW: notes subcommands (v0.4.0, TSK-25) ---
+  async notes() {
+    const sub = process.argv[3];
+    if (!sub) {
+      console.log('Usage: ab notes <list|create|show|edit|rm|mv> [...]');
+      process.exit(1);
+    }
+    if (sub === 'list')   return notesList();
+    if (sub === 'create') return notesCreate();
+    if (sub === 'show')   return notesShow();
+    if (sub === 'edit')   return notesEdit();
+    if (sub === 'rm')     return notesRm();
+    if (sub === 'mv')     return notesMv();
+    die(`Unknown subcommand: ab notes ${sub}`);
+  },
+
   // --- NEW: worktree subcommands ---
   async worktree() {
     const sub = process.argv[3];
@@ -578,6 +594,14 @@ const commands = {
     ab update <id> --field value         Update any field (incl. pr_url, pipeline_stage, worktree_path, branch_name)
     ab comment <id> "message"            Add a comment
 
+  NOTES (nested sub-pages per project)
+    ab notes list <project-slug>             Indented tree of notes
+    ab notes create <project|parent-id> "Title"  Create root (slug) or child (parent id)
+    ab notes show <id>                       Print content
+    ab notes edit <id>                       Open in $EDITOR
+    ab notes rm <id> [--force]               Delete (cascades to children)
+    ab notes mv <id> --parent <id|root>      Reparent
+
   MAINTENANCE
     ab worktree gc [--execute]           GC candidates (dry-run by default)
     ab worktree remove <id> [--force]    Remove one worktree (must be Done/Cancelled; --force skips checks)
@@ -599,6 +623,164 @@ const commands = {
 `);
   },
 };
+
+// ---------- Notes subcommand handlers ----------
+
+// Resolve a project-ish arg: numeric ID or slug.
+async function resolveProject(arg) {
+  if (!arg) die('Project slug or id required.');
+  if (/^\d+$/.test(arg)) return req(`/projects/${arg}`);
+  return req(`/projects/slug/${arg}`).catch(() => {
+    die(`No project matching '${arg}'.`);
+  });
+}
+
+function buildNoteTree(rows) {
+  const byId = new Map();
+  for (const r of rows) byId.set(r.id, { ...r, children: [] });
+  const roots = [];
+  for (const n of byId.values()) {
+    if (n.parent_id && byId.has(n.parent_id)) {
+      byId.get(n.parent_id).children.push(n);
+    } else {
+      roots.push(n);
+    }
+  }
+  const sortRec = (list) => {
+    list.sort((a, b) => a.position - b.position || a.id - b.id);
+    list.forEach((n) => sortRec(n.children));
+  };
+  sortRec(roots);
+  return roots;
+}
+
+async function notesList() {
+  const slug = process.argv[4];
+  if (!slug) die('Usage: ab notes list <project-slug>');
+  const project = await resolveProject(slug);
+  const rows = await req(`/projects/${project.id}/notes`);
+  if (!rows.length) {
+    console.log(`No notes in ${project.name}. Create one with: ab notes create ${project.slug || project.id} "Title"`);
+    return;
+  }
+  const roots = buildNoteTree(rows);
+  console.log(`\n  ${project.name} — notes`);
+  console.log('  ' + '─'.repeat(60));
+  const walk = (nodes, depth) => {
+    for (const n of nodes) {
+      const indent = '  '.repeat(depth);
+      console.log(`  ${indent}#${String(n.id).padEnd(4)} ${n.title}`);
+      if (n.children.length) walk(n.children, depth + 1);
+    }
+  };
+  walk(roots, 0);
+  console.log();
+}
+
+async function notesCreate() {
+  // Two forms:
+  //   ab notes create <project-slug> "Title"       → root note
+  //   ab notes create <parent-id> "Title"          → child note (numeric parent)
+  const target = process.argv[4];
+  const title = process.argv[5];
+  if (!target || !title) {
+    die('Usage: ab notes create <project-slug|parent-id> "Title"');
+  }
+  let projectId, parentId = null;
+  if (/^\d+$/.test(target)) {
+    // Numeric: treat as parent note id, look up project from it.
+    const parent = await req(`/notes/${target}`).catch(() => null);
+    if (!parent) die(`No note #${target} (pass a project slug for a root note).`);
+    projectId = parent.project_id;
+    parentId = parent.id;
+  } else {
+    const project = await resolveProject(target);
+    projectId = project.id;
+  }
+  const body = { title };
+  if (parentId != null) body.parent_id = parentId;
+  const note = await req(`/projects/${projectId}/notes`, { method: 'POST', body });
+  console.log(`Created note #${note.id}: ${note.title}${parentId ? ` (child of #${parentId})` : ''}`);
+}
+
+async function notesShow() {
+  const id = process.argv[4];
+  if (!id) die('Usage: ab notes show <id>');
+  const note = await req(`/notes/${id}`);
+  console.log(`\n  #${note.id}: ${note.title}`);
+  console.log(`  Project: ${note.project_id}${note.parent_id ? ` · Parent: #${note.parent_id}` : ''}`);
+  console.log('  ' + '─'.repeat(60));
+  console.log(note.content || '(empty)');
+  console.log();
+}
+
+async function notesEdit() {
+  const id = process.argv[4];
+  if (!id) die('Usage: ab notes edit <id>');
+  const editor = process.env.EDITOR || 'vi';
+  const note = await req(`/notes/${id}`);
+  const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import('fs');
+  const { tmpdir } = await import('os');
+  const dir = mkdtempSync(join(tmpdir(), 'ab-note-'));
+  const path = join(dir, `note-${id}.md`);
+  writeFileSync(path, note.content || '');
+  const r = spawnSync(editor, [path], { stdio: 'inherit' });
+  if (r.status !== 0) {
+    rmSync(dir, { recursive: true, force: true });
+    die(`Editor exited with code ${r.status}.`);
+  }
+  const content = readFileSync(path, 'utf8');
+  rmSync(dir, { recursive: true, force: true });
+  if (content === note.content) {
+    console.log('No changes.');
+    return;
+  }
+  await req(`/notes/${id}`, { method: 'PUT', body: { content } });
+  console.log(`Saved note #${id}.`);
+}
+
+async function notesRm() {
+  const id = process.argv[4];
+  if (!id) die('Usage: ab notes rm <id> [--force]');
+  const flags = parseFlags(process.argv.slice(5));
+  const note = await req(`/notes/${id}`);
+  const all = await req(`/projects/${note.project_id}/notes`);
+  const descendants = new Set();
+  const walk = (pid) => {
+    for (const n of all) {
+      if (n.parent_id === pid) {
+        descendants.add(n.id);
+        walk(n.id);
+      }
+    }
+  };
+  walk(Number(id));
+  if (!flags.force) {
+    process.stderr.write(
+      `About to delete note #${id} "${note.title}"` +
+      (descendants.size ? ` and ${descendants.size} descendant(s)` : '') +
+      `. Re-run with --force to confirm.\n`
+    );
+    process.exit(1);
+  }
+  await req(`/notes/${id}`, { method: 'DELETE' });
+  console.log(`Deleted note #${id}${descendants.size ? ` (+ ${descendants.size} descendants)` : ''}.`);
+}
+
+async function notesMv() {
+  const id = process.argv[4];
+  if (!id) die('Usage: ab notes mv <id> --parent <parent-id|root>');
+  const flags = parseFlags(process.argv.slice(5));
+  if (flags.parent === undefined) die('Usage: ab notes mv <id> --parent <parent-id|root>');
+  const parent_id = (flags.parent === 'root' || flags.parent === true) ? null : Number(flags.parent);
+  const body = { parent_id };
+  try {
+    const note = await req(`/notes/${id}/move`, { method: 'POST', body });
+    console.log(`Moved note #${note.id} → parent=${note.parent_id == null ? 'root' : note.parent_id}`);
+  } catch (e) {
+    die(`Move failed: ${e.message}`);
+  }
+}
 
 // ---------- Worktree subcommand handlers ----------
 

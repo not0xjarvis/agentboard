@@ -939,3 +939,326 @@ button, .card, .tab, .cancelled-row, .project-card {
   .board { padding: 8px; }
   .tab { padding: 12px 10px; font-size: 13px; }
 }
+
+/* ============================================================
+ * Nested project notes (TSK-25, v0.4.0)
+ * ============================================================ */
+.project-notes-tab {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.description-field--inline {
+  padding: 12px 20px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+}
+
+.project-notes {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.project-notes-sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.project-notes-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.note-tree-mobile-close {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.note-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 6px 12px;
+  min-height: 0;
+}
+
+.note-tree.drag-over-root {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+}
+
+.note-tree-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 16px;
+  text-align: center;
+}
+
+.note-tree-node {
+  user-select: none;
+}
+
+.note-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  position: relative;
+}
+
+.note-tree-row:hover {
+  background: var(--surface-hover);
+}
+
+.note-tree-row.selected {
+  background: var(--accent-subtle);
+  color: var(--text);
+}
+
+.note-tree-row.drag-over {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.note-tree-chevron {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 16px;
+}
+
+.note-tree-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-tree-rename {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 2px 6px;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.note-tree-rename:focus { outline: none; }
+
+.note-tree-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.note-tree-row:hover .note-tree-actions,
+.note-tree-row.selected .note-tree-actions {
+  display: flex;
+}
+
+.note-tree-action {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.note-tree-action:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.note-tree-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 100px;
+}
+
+.note-tree-menu button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.note-tree-menu button:hover {
+  background: var(--surface-hover);
+}
+
+.note-tree-add-root {
+  display: block;
+  width: calc(100% - 8px);
+  margin: 8px 4px 0;
+  padding: 6px 8px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.note-tree-add-root:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.project-notes-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.project-notes-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-notes-mobile-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.project-notes-title {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  padding: 4px 0;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.project-notes-title:focus {
+  outline: none;
+}
+
+.project-notes-main .notes-editor-milkdown {
+  border: none;
+  border-radius: 0;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.project-notes-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  gap: 10px;
+}
+
+.project-notes-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.project-notes-empty-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 360px;
+}
+
+/* Mobile: collapse tree into a slide-over sheet */
+@media (max-width: 640px) {
+  .project-notes {
+    grid-template-columns: 1fr;
+  }
+  .project-notes-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 80vw;
+    max-width: 320px;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 180ms ease;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.4);
+    padding-top: env(safe-area-inset-top);
+  }
+  .project-notes-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .note-tree-mobile-close { display: inline-flex; }
+  .project-notes-mobile-toggle { display: inline-flex; }
+  .project-notes-header { padding: 10px 12px; }
+  .project-notes-title { font-size: 16px; }
+  .description-field--inline { padding: 10px 12px 6px; }
+}

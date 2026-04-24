@@ -251,7 +251,10 @@ const commands = {
 
     // 2. Preflight: repo must be clean.
     // Ensure the repo's local exclude list ignores .worktrees/ so subsequent
-    // claims don't see their own earlier worktrees as "uncommitted changes".
+    // claims don't see their own earlier worktrees as "uncommitted changes",
+    // and ignores .agentboard-task.json so ab done's clean-worktree check
+    // doesn't trip on the context file we write into every worktree.
+    // info/exclude is shared across all linked worktrees of the repo.
     try {
       let repoRootForExclude;
       try { repoRootForExclude = gitRepoRoot(repoPath); } catch { repoRootForExclude = null; }
@@ -260,8 +263,16 @@ const commands = {
         if (existsSync(excludeFile)) {
           const { readFileSync } = await import('fs');
           const cur = readFileSync(excludeFile, 'utf8');
-          if (!cur.split('\n').some(l => l.trim() === '.worktrees/' || l.trim() === '/.worktrees/')) {
-            appendFileSync(excludeFile, (cur.endsWith('\n') ? '' : '\n') + '.worktrees/\n');
+          const lines = cur.split('\n').map(l => l.trim());
+          const toAdd = [];
+          if (!lines.some(l => l === '.worktrees/' || l === '/.worktrees/')) {
+            toAdd.push('.worktrees/');
+          }
+          if (!lines.some(l => l === '.agentboard-task.json' || l === '/.agentboard-task.json')) {
+            toAdd.push('.agentboard-task.json');
+          }
+          if (toAdd.length) {
+            appendFileSync(excludeFile, (cur.endsWith('\n') ? '' : '\n') + toAdd.join('\n') + '\n');
           }
         }
       }

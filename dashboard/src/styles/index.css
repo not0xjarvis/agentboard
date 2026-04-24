@@ -19,16 +19,29 @@
   --radius-lg: 8px;
 }
 
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
   overflow-x: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Give buttons and cards a better touch feel without affecting desktop hover */
+button, .card, .tab, .cancelled-row, .project-card {
+  touch-action: manipulation;
 }
 
 /* Layout */
-.app { display: flex; flex-direction: column; height: 100vh; }
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh; /* accounts for mobile address bars */
+}
 
 .header {
   display: flex;
@@ -469,3 +482,170 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+ * Mobile layout (≤640px — phones)
+ * Tablets (≥641px) keep the desktop layout.
+ * ============================================================ */
+@media (max-width: 640px) {
+  /* iOS safe-area padding on top/bottom */
+  .header {
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top));
+    gap: 8px;
+    min-height: 44px;
+  }
+  .header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .header > div { flex-wrap: wrap; row-gap: 6px; }
+  .header h1 { font-size: 15px; }
+  .header-actions { gap: 6px; flex-shrink: 0; }
+
+  /* Tabs: horizontal scroll, larger tap targets */
+  .tabs {
+    padding: 0 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 12px 14px;
+    font-size: 14px;
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+
+  /* Filter bar wraps, form controls get thumb-friendly */
+  .filter-bar {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    gap: 8px 6px;
+    row-gap: 8px;
+  }
+  .filter-bar select {
+    padding: 8px 10px;
+    font-size: 14px;
+    min-height: 36px;
+  }
+
+  /* Kanban: one column per screen, scroll-snap paging */
+  .board {
+    padding: 10px 12px;
+    gap: 10px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding: 12px;
+  }
+  .column {
+    /* Fill most of the viewport so one column is visible at a time */
+    min-width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    /* Give each column its own surface on mobile for visual separation */
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    gap: 8px;
+  }
+  .column-header {
+    padding: 2px 4px 4px;
+    font-size: 13px;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+  .column-count { font-size: 12px; padding: 1px 8px; min-width: 24px; }
+
+  .column-cards { gap: 6px; padding: 0; }
+
+  /* Cards: slightly bigger tap target, clearer type */
+  .card { padding: 12px 12px; }
+  .card-title { font-size: 14px; }
+  .badge { font-size: 11px; padding: 2px 6px; }
+
+  /* Buttons: min 36-40px tap target */
+  .btn { padding: 8px 12px; font-size: 13px; min-height: 36px; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; min-height: 32px; }
+
+  /* Modal: fill the screen */
+  .modal-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  /* Inputs: 16px font prevents iOS auto-zoom on focus */
+  .form-group input,
+  .form-group textarea,
+  .form-group select,
+  .comment-input input,
+  .quick-add-input {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  /* Form grids stack to one column on phones */
+  .modal [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Task detail props: keep two-col but shrink label column */
+  .task-detail-props {
+    grid-template-columns: 90px 1fr;
+    gap: 10px 10px;
+    font-size: 14px;
+  }
+  .task-detail-title { font-size: 17px; }
+  .task-detail-header { flex-wrap: wrap; gap: 10px; }
+
+  /* Project header: allow badges to wrap onto their own row */
+  .project-layout { grid-template-columns: 1fr; }
+  .project-sidebar {
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Notes editor: fit the screen without forcing scroll */
+  .notes-editor { min-height: 260px; font-size: 14px; padding: 12px; }
+  .notes-section { padding: 12px; }
+
+  /* Projects grid: single column */
+  .projects-grid { grid-template-columns: 1fr; gap: 10px; }
+  .project-card { padding: 14px; }
+
+  /* Cancelled section: tighten */
+  .cancelled-section { padding: 8px 12px 14px; }
+
+  /* Comments */
+  .comments { margin-top: 16px; }
+  .comment { padding: 10px 0; font-size: 14px; }
+  .comment-input { flex-direction: column; align-items: stretch; }
+  .comment-input input { width: 100%; }
+  .comment-input button { width: 100%; min-height: 40px; }
+}
+
+/* Very small phones (<380px) — tighten further */
+@media (max-width: 379px) {
+  .header h1 { font-size: 14px; }
+  .column { min-width: calc(100vw - 24px); max-width: calc(100vw - 24px); }
+  .board { padding: 8px; }
+  .tab { padding: 12px 10px; font-size: 13px; }
+}

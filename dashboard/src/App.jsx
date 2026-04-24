@@ -7,9 +7,11 @@ import CreateProjectModal from './components/CreateProjectModal.jsx';
 import ProjectPage from './components/ProjectPage.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
 import BottomNav from './components/BottomNav.jsx';
+import FocusView from './components/FocusView.jsx';
 import ProjectsTable from './components/ProjectsTable.jsx';
 import { parseMentionUrl } from './components/mentionLink.js';
 import EmojiPicker from './components/EmojiPicker.jsx';
+import { useLiveEvents } from './hooks/useLiveEvents.js';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 const CANCELLED_COL = 'Cancelled';
@@ -26,6 +28,7 @@ function loadProjectsView() {
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
+  const [focusTasks, setFocusTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -48,16 +51,27 @@ export default function App() {
     const params = {};
     if (filterProject) params.project_id = filterProject;
     if (filterAssignee) params.assignee = filterAssignee;
-    const [t, p] = await Promise.all([api.getTasks(params), api.getProjects()]);
+    const [t, p, f] = await Promise.all([
+      api.getTasks(params),
+      api.getProjects(),
+      api.getFocus(),
+    ]);
     setTasks(t);
     setProjects(p);
+    setFocusTasks(f);
   }, [filterProject, filterAssignee]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    const interval = setInterval(load, 5000);
+    // SSE pushes near-instant updates; keep a 30s fallback poll in case the
+    // stream is behind a buffering proxy.
+    const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, [load]);
+
+  useLiveEvents((topic) => {
+    if (topic === 'tasks' || topic === 'projects' || topic === 'change') load();
+  });
 
   const handleStatusChange = async (taskId, newStatus) => {
     await api.updateTask(taskId, { status: newStatus });
@@ -90,7 +104,7 @@ export default function App() {
   const nav = (v) => {
     setSelectedProject(null);
     setView(v);
-    setFilterAssignee(v === 'my-focus' ? 'Human' : v === 'agent-queue' ? 'Agent' : '');
+    setFilterAssignee('');
   };
 
   // Resolve an /ab/... link from the notes editor to a project (+ optional note).
@@ -164,12 +178,20 @@ export default function App() {
 
       <div className="tabs main-tabs">
         <button className={`tab ${view === 'board' ? 'active' : ''}`} onClick={() => nav('board')}>Board</button>
-        <button className={`tab ${view === 'my-focus' ? 'active' : ''}`} onClick={() => nav('my-focus')}>My Focus</button>
-        <button className={`tab ${view === 'agent-queue' ? 'active' : ''}`} onClick={() => nav('agent-queue')}>Agent Queue</button>
+        <button className={`tab ${view === 'focus' ? 'active' : ''}`} onClick={() => nav('focus')}>
+          Focus
+          {focusTasks.length > 0 && <span className="tab-badge">{focusTasks.length}</span>}
+        </button>
         <button className={`tab ${view === 'projects' ? 'active' : ''}`} onClick={() => nav('projects')}>Projects</button>
       </div>
 
-      {view === 'projects' ? (
+      {view === 'focus' ? (
+        <FocusView
+          tasks={focusTasks}
+          onTaskClick={setSelectedTask}
+          onChange={load}
+        />
+      ) : view === 'projects' ? (
         <div className="projects-view">
           <div className="projects-toolbar">
             <div className="view-toggle" role="group" aria-label="Projects view">
@@ -283,7 +305,7 @@ export default function App() {
         />
       )}
 
-      <BottomNav current={view} onNav={nav} />
+      <BottomNav current={view} onNav={nav} focusCount={focusTasks.length} />
     </div>
   );
 }

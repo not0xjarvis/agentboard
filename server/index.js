@@ -5,6 +5,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import db from './db.js';
 import { startPrPoller } from './workers/pr-poller.js';
+import { registerClient, broadcast } from './sse.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,6 +13,29 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
+
+// --- Live events ---
+
+app.get('/api/events', (req, res) => {
+  registerClient(req, res);
+});
+
+// After any 2xx mutation, broadcast a change event so live dashboards refresh
+// without polling. Topic inferred from the URL path.
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  res.on('finish', () => {
+    if (res.statusCode < 200 || res.statusCode >= 300) return;
+    const p = req.path;
+    let topic = 'change';
+    if (p.includes('/tasks') || p.includes('/worktree')) topic = 'tasks';
+    else if (p.includes('/notes')) topic = 'notes';
+    else if (p.includes('/projects')) topic = 'projects';
+    else if (p.includes('/comments')) topic = 'comments';
+    broadcast(topic);
+  });
+  next();
+});
 
 // --- Projects ---
 
@@ -92,8 +116,13 @@ app.get('/api/tasks', (req, res) => {
   if (req.query.status) { conditions.push('t.status = ?'); values.push(req.query.status); }
   if (req.query.project_id) { conditions.push('t.project_id = ?'); values.push(req.query.project_id); }
   if (req.query.assignee) { conditions.push('t.assignee = ?'); values.push(req.query.assignee); }
+  // Focus mode: tasks that need human action — either an agent flagged a decision,
+  // or the task is assigned to a human and still open (not Done/Cancelled).
+  if (req.query.focus === '1' || req.query.focus === 'true') {
+    conditions.push("(t.needs_decision = 1 OR (t.assignee = 'Human' AND t.status NOT IN ('Done','Cancelled')))");
+  }
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
-  sql += ' ORDER BY CASE t.priority WHEN \'Urgent\' THEN 0 WHEN \'High\' THEN 1 WHEN \'Medium\' THEN 2 WHEN \'Low\' THEN 3 END, t.created_at DESC';
+  sql += ' ORDER BY t.needs_decision DESC, CASE t.priority WHEN \'Urgent\' THEN 0 WHEN \'High\' THEN 1 WHEN \'Medium\' THEN 2 WHEN \'Low\' THEN 3 END, t.created_at DESC';
   res.json(db.prepare(sql).all(...values));
 });
 
@@ -135,6 +164,8 @@ app.put('/api/tasks/:id', (req, res) => {
     'labels', 'size', 'due_date',
     // Phase 1 additions
     'pr_url', 'pipeline_stage', 'worktree_path', 'branch_name',
+    // Focus queue (v0.8.0)
+    'needs_decision', 'decision_question',
   ];
   const updates = [];
   const values = [];

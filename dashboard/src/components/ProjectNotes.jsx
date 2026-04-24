@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../hooks/useApi.js';
 import NoteTree from './NoteTree.jsx';
 import NotesEditor from './NotesEditor.jsx';
+import { useLiveEvents } from '../hooks/useLiveEvents.js';
 
 const EXPAND_KEY = (projectId) => `ab-notes-expand-${projectId}`;
 
@@ -77,6 +78,15 @@ export default function ProjectNotes({ project, onMentionNavigate, initialNoteId
   useEffect(() => {
     writeExpanded(project.id, expanded);
   }, [project.id, expanded]);
+
+  // Live updates: refresh the tree when any note mutation lands. Skip while
+  // the user is actively typing (pendingSaveRef non-null) to avoid stomping
+  // unsaved content.
+  useLiveEvents((topic) => {
+    if (topic !== 'notes' && topic !== 'change') return;
+    if (pendingSaveRef.current) return;
+    reload();
+  });
 
   // Load content for the selected note. Flush any pending save first.
   useEffect(() => {

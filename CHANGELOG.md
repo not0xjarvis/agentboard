@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1] — 2026-04-22
+
+### Mobile-friendly dashboard + post-Phase-1 polish
+
+The board now works properly from a phone over Tailscale. Swipe between columns, add tasks, edit notes — no more desktop-only layout.
+
+- **Mobile redesign:** swipeable kanban (one column per screen, scroll-snap), full-screen modals on phones, 16px form inputs so iOS doesn't auto-zoom on focus, wrapping headers and filter bars, safe-area padding for notched devices, and proper `100dvh` handling so the browser's address bar doesn't eat the UI.
+- **PWA metadata:** `viewport-fit=cover`, `theme-color`, and `apple-mobile-web-app-*` tags so adding to home screen gives a native-feeling app shell.
+- **Worktree-dirty fix:** `ab claim` now appends `.agentboard-task.json` to the repo's `.git/info/exclude` alongside `.worktrees/`. `ab done` no longer falsely trips the "worktree dirty" check and no longer requires `--dirty` on every clean task.
+- **Create-task modal bugfix:** the status dropdown was stuck on old statuses (Brainstorming, In Progress, In Review). Replaced with the current pipeline (Planning, Building, Review).
+- **Handover doc:** `docs/HANDOVER.md` added — durable write-up of current state, Phase 2/3 queue, operational TODOs, and the Tailscale URL for mobile access.
+
 ## [0.2.0] — 2026-04-18
 
 ### Worktree-aware task pipeline

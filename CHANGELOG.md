@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0] — 2026-04-24
+
+### Notion-grade markdown editor for project notes
+
+The Notes pane in the project drawer was a plain textarea. Markdown was stored but never rendered. Typing `# Header` showed `# Header`, not a header. If you came from Notion, the regression was the main thing keeping you on Notion.
+
+Replaced with a Milkdown/Crepe editor that renders live. Type `# Heading` and the line styles itself. Type `- [ ] Task` and a checkbox appears, click to toggle. Type `/` and a slash menu opens with heading, list, todo, code, quote, table, divider. Code blocks get syntax highlighting via CodeMirror. Existing markdown notes load and render correctly — no migration needed.
+
+The editor saves as plain markdown to the same `notes` column. No schema change, no API change. Round-trips byte-clean (modulo trailing newline normalization). Revertible with `git revert` and your notes still display in the old textarea.
+
+- **Live formatting:** type markdown, see formatted output. Headers, lists, todos, code blocks, blockquotes, tables, links, dividers.
+- **Slash menu:** `/` opens block insertion. Notion-style.
+- **Theme:** Crepe's tokens overridden to match AB's GitHub-dark palette. Editor blends in.
+- **Mobile:** font-size bumps to 15px on phone, no zoom-on-focus.
+- **Bundle cost:** main chunk grew from ~250KB to ~1.6MB (517KB gz). Lazy-loading the editor on Notes-tab open is a follow-up — fine for a self-hosted dashboard, worth optimizing if it ever ships externally.
+
+### Itemized changes
+
+- New: `dashboard/src/components/NotesEditor.jsx` — Milkdown/Crepe wrapper, listener-based onChange, mount-once with `key={project.id}` for project switching.
+- New deps: `@milkdown/crepe`, `@milkdown/core`, `@milkdown/preset-commonmark`, `@milkdown/preset-gfm`, `@milkdown/plugin-slash`, `@milkdown/plugin-listener`, `@milkdown/react`, `@milkdown/theme-nord`.
+- Changed: `ProjectPage.jsx:151` — textarea → NotesEditor; existing debounced save unchanged.
+- Changed: `styles/index.css` — added `.notes-editor-milkdown` block + Crepe color-token overrides + ProseMirror element styles + mobile breakpoint.
+- Out of scope (later): task notes (separate component), slash command for linking other AB pages, image uploads, lazy-load to shrink bundle.
+
 ## [0.2.2] — 2026-04-23
 
 ### CLI polish

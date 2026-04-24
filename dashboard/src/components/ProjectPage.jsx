@@ -3,6 +3,7 @@ import { api } from '../hooks/useApi.js';
 import Board from './Board.jsx';
 import Card from './Card.jsx';
 import TaskModal from './TaskModal.jsx';
+import NotesEditor from './NotesEditor.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 
@@ -148,11 +149,11 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
               <span>Notes</span>
               {saving && <span className="saving-indicator">Saving...</span>}
             </div>
-            <textarea
-              className="notes-editor"
+            <NotesEditor
+              key={project.id}
               value={notes}
-              onChange={handleNotesChange}
-              placeholder="Project notes, context, decisions, links...&#10;&#10;Write anything here — like a CLAUDE.md for this project.&#10;Agents can read this for context."
+              onChange={(md) => handleNotesChange({ target: { value: md } })}
+              placeholder="Project notes, context, decisions, links… type / for commands"
             />
           </div>
         </div>

@@ -204,7 +204,14 @@ const commands = {
 
   async create() {
     const name = process.argv[3];
-    if (!name) return console.log('Usage: ab create "task name" [--project_id N] [--priority High] [--assignee Agent] [--status Backlog]');
+    const usage = 'Usage: ab create "task name" [--project_id N] [--priority High] [--assignee Agent] [--status Backlog]';
+    if (!name) return console.log(usage);
+    if (name.startsWith('-')) {
+      // Guard against 'ab create --help' (and similar) silently creating a task named "--help".
+      console.error(`Refusing to create task with name starting with '-' (got: ${JSON.stringify(name)}).`);
+      console.error(usage);
+      process.exit(1);
+    }
     const body = { name };
     const flags = parseFlags(process.argv.slice(4));
     for (const [k, v] of Object.entries(flags)) {
@@ -777,7 +784,8 @@ async function worktreeRemove() {
 
 // ---------- Dispatcher ----------
 
-const cmd = process.argv[2] || 'help';
+let cmd = process.argv[2] || 'help';
+if (cmd === '--help' || cmd === '-h') cmd = 'help';
 if (commands[cmd]) {
   commands[cmd]().catch(e => { console.error(e.message || e); process.exit(1); });
 } else {

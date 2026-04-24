@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2] — 2026-04-23
+
+### CLI polish
+
+- `ab --help` and `ab -h` now route to the `help` command instead of printing "Unknown command".
+- `ab create` refuses names starting with `-` and exits non-zero. Prevents accidental "--help" tasks from being created when someone runs `ab create --help` expecting usage text.
+
 ## [0.2.1] — 2026-04-22
 
 ### Mobile-friendly dashboard + post-Phase-1 polish

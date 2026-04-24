@@ -224,4 +224,20 @@ db.exec(`
   seed();
 }
 
+// --- v0.8.0: decision queue (Focus tab) ---
+//
+// An agent that hits a gate it can't answer flips `needs_decision = 1` and
+// writes the question to `decision_question`. The task stays in whatever
+// status it was in — the flag surfaces it in the Focus tab so the human
+// can unblock without re-reading the board.
+{
+  const taskColsForDecision = db.prepare("PRAGMA table_info(tasks)").all().map(c => c.name);
+  if (!taskColsForDecision.includes('needs_decision')) {
+    db.exec("ALTER TABLE tasks ADD COLUMN needs_decision INTEGER DEFAULT 0");
+  }
+  if (!taskColsForDecision.includes('decision_question')) {
+    db.exec("ALTER TABLE tasks ADD COLUMN decision_question TEXT");
+  }
+}
+
 export default db;

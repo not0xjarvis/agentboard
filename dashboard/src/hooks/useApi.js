@@ -25,6 +25,7 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return request(`/tasks${qs ? '?' + qs : ''}`);
   },
+  getFocus: () => request('/tasks?focus=1'),
   getTask: (id) => request(`/tasks/${id}`),
   createTask: (body) => request('/tasks', { method: 'POST', body }),
   updateTask: (id, body) => request(`/tasks/${id}`, { method: 'PUT', body }),

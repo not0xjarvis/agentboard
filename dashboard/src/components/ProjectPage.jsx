@@ -3,7 +3,7 @@ import { api } from '../hooks/useApi.js';
 import Board from './Board.jsx';
 import Card from './Card.jsx';
 import TaskModal from './TaskModal.jsx';
-import NotesEditor from './NotesEditor.jsx';
+import ProjectNotes from './ProjectNotes.jsx';
 import BottomNav from './BottomNav.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
@@ -11,7 +11,6 @@ const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 export default function ProjectPage({ project: initialProject, onBack, onTaskClick, onNavigate }) {
   const [project, setProject] = useState(initialProject);
   const [tasks, setTasks] = useState([]);
-  const [notes, setNotes] = useState(initialProject.notes || '');
   const [description, setDescription] = useState(initialProject.description || '');
   const [saving, setSaving] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -20,7 +19,6 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
   const [projects, setProjects] = useState([]);
   const [tab, setTab] = useState('tasks');
   const [activity, setActivity] = useState([]);
-  const saveTimeout = useRef(null);
   const descSaveTimeout = useRef(null);
 
   const load = useCallback(async () => {
@@ -37,18 +35,6 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
   }, [project.id]);
 
   useEffect(() => { load(); }, [load]);
-
-  // Auto-save notes with debounce
-  const handleNotesChange = (e) => {
-    const val = e.target.value;
-    setNotes(val);
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(async () => {
-      setSaving(true);
-      await api.updateProject(project.id, { notes: val });
-      setSaving(false);
-    }, 800);
-  };
 
   // Auto-save description with debounce
   const handleDescChange = (e) => {
@@ -157,8 +143,8 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
       )}
 
       {tab === 'notes' && (
-        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
-          <div className="description-field">
+        <div className="project-notes-tab">
+          <div className="description-field description-field--inline">
             <div className="description-header">
               <label className="description-label" htmlFor="project-description">Description</label>
               {saving && <span className="saving-indicator">Saving...</span>}
@@ -172,18 +158,7 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
               rows={2}
             />
           </div>
-          <div className="notes-section" style={{ padding: 0 }}>
-            <div className="notes-header">
-              <span>Notes</span>
-              {saving && <span className="saving-indicator">Saving...</span>}
-            </div>
-            <NotesEditor
-              key={project.id}
-              value={notes}
-              onChange={(md) => handleNotesChange({ target: { value: md } })}
-              placeholder="Project notes, context, decisions, links… type / for commands"
-            />
-          </div>
+          <ProjectNotes project={project} />
         </div>
       )}
 

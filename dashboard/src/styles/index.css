@@ -649,6 +649,69 @@ button, .card, .tab, .cancelled-row, .project-card {
   padding: 0 4px;
 }
 
+/* Project header stacking */
+.project-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.project-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.project-header-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Bottom nav — mobile only (hidden by default) */
+.bottom-nav { display: none; }
+
+/* Editable project description */
+.description-field {
+  margin-bottom: 16px;
+}
+.description-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.description-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.description-editor {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+.description-editor:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.description-editor::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -769,7 +832,8 @@ button, .card, .tab, .cancelled-row, .project-card {
   .form-group textarea,
   .form-group select,
   .comment-input input,
-  .quick-add-input {
+  .quick-add-input,
+  .description-editor {
     font-size: 16px;
     padding: 10px 12px;
   }
@@ -819,6 +883,53 @@ button, .card, .tab, .cancelled-row, .project-card {
   .comment-input { flex-direction: column; align-items: stretch; }
   .comment-input input { width: 100%; }
   .comment-input button { width: 100%; min-height: 40px; }
+
+  /* Project header: stack title row and badge row on their own lines */
+  .project-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  .project-header-title-row { width: 100%; gap: 10px; }
+  .project-header-badge-row { width: 100%; }
+
+  /* Top tabs replaced by bottom nav on mobile */
+  .main-tabs { display: none; }
+
+  /* Bottom nav — fixed thumb-reach strip */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 50;
+  }
+  .bottom-nav-item {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 4px 12px;
+    cursor: pointer;
+    min-height: 48px;
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+    font-family: inherit;
+  }
+  .bottom-nav-item.active {
+    color: var(--text);
+    border-top-color: var(--accent);
+  }
+
+  /* Reserve room at the bottom of the app for the nav so board/notes don't hide under it */
+  .app { padding-bottom: calc(48px + env(safe-area-inset-bottom)); }
 }
 
 /* Very small phones (<380px) — tighten further */

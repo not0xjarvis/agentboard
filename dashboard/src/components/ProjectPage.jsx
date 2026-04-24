@@ -3,13 +3,16 @@ import { api } from '../hooks/useApi.js';
 import Board from './Board.jsx';
 import Card from './Card.jsx';
 import TaskModal from './TaskModal.jsx';
+import NotesEditor from './NotesEditor.jsx';
+import BottomNav from './BottomNav.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 
-export default function ProjectPage({ project: initialProject, onBack, onTaskClick }) {
+export default function ProjectPage({ project: initialProject, onBack, onTaskClick, onNavigate }) {
   const [project, setProject] = useState(initialProject);
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState(initialProject.notes || '');
+  const [description, setDescription] = useState(initialProject.description || '');
   const [saving, setSaving] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showAddTask, setShowAddTask] = useState(false);
@@ -18,6 +21,7 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
   const [tab, setTab] = useState('tasks');
   const [activity, setActivity] = useState([]);
   const saveTimeout = useRef(null);
+  const descSaveTimeout = useRef(null);
 
   const load = useCallback(async () => {
     const [t, p, proj, act] = await Promise.all([
@@ -42,6 +46,18 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
     saveTimeout.current = setTimeout(async () => {
       setSaving(true);
       await api.updateProject(project.id, { notes: val });
+      setSaving(false);
+    }, 800);
+  };
+
+  // Auto-save description with debounce
+  const handleDescChange = (e) => {
+    const val = e.target.value;
+    setDescription(val);
+    if (descSaveTimeout.current) clearTimeout(descSaveTimeout.current);
+    descSaveTimeout.current = setTimeout(async () => {
+      setSaving(true);
+      await api.updateProject(project.id, { description: val });
       setSaving(false);
     }, 800);
   };
@@ -75,14 +91,18 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
 
   return (
     <div className="app">
-      <div className="header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="btn btn-sm" onClick={onBack}>← Back</button>
-          <h1>{project.name}</h1>
-          {project.slug && <span className="badge label" style={{ fontFamily: 'monospace' }}>{project.slug}</span>}
-          <span className={`badge ${project.status === 'Active' ? 'priority-medium' : 'priority-low'}`}>{project.status}</span>
-          {project.category && <span className="badge label">{project.category}</span>}
-          <span className={`badge priority-${project.priority === 'P0' ? 'urgent' : project.priority === 'P1' ? 'high' : 'medium'}`}>{project.priority}</span>
+      <div className="header project-header">
+        <div className="project-header-left">
+          <div className="project-header-title-row">
+            <button className="btn btn-sm" onClick={onBack}>← Back</button>
+            <h1>{project.name}</h1>
+          </div>
+          <div className="project-header-badge-row">
+            {project.slug && <span className="badge label" style={{ fontFamily: 'monospace' }}>{project.slug}</span>}
+            <span className={`badge ${project.status === 'Active' ? 'priority-medium' : 'priority-low'}`}>{project.status}</span>
+            {project.category && <span className="badge label">{project.category}</span>}
+            <span className={`badge priority-${project.priority === 'P0' ? 'urgent' : project.priority === 'P1' ? 'high' : 'medium'}`}>{project.priority}</span>
+          </div>
         </div>
         <div className="header-actions">
           {project.repo_url && <a href={project.repo_url} target="_blank" rel="noopener" className="btn btn-sm">Repo</a>}
@@ -138,21 +158,30 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
 
       {tab === 'notes' && (
         <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
-          {project.description && (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
-              {project.description}
+          <div className="description-field">
+            <div className="description-header">
+              <label className="description-label" htmlFor="project-description">Description</label>
+              {saving && <span className="saving-indicator">Saving...</span>}
             </div>
-          )}
+            <textarea
+              id="project-description"
+              className="description-editor"
+              value={description}
+              onChange={handleDescChange}
+              placeholder="Short description of this project..."
+              rows={2}
+            />
+          </div>
           <div className="notes-section" style={{ padding: 0 }}>
             <div className="notes-header">
               <span>Notes</span>
               {saving && <span className="saving-indicator">Saving...</span>}
             </div>
-            <textarea
-              className="notes-editor"
+            <NotesEditor
+              key={project.id}
               value={notes}
-              onChange={handleNotesChange}
-              placeholder="Project notes, context, decisions, links...&#10;&#10;Write anything here — like a CLAUDE.md for this project.&#10;Agents can read this for context."
+              onChange={(md) => handleNotesChange({ target: { value: md } })}
+              placeholder="Project notes, context, decisions, links… type / for commands"
             />
           </div>
         </div>
@@ -182,6 +211,8 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
       {selectedTask && (
         <TaskModal task={selectedTask} projects={projects} onClose={() => setSelectedTask(null)} onUpdate={handleTaskUpdated} />
       )}
+
+      {onNavigate && <BottomNav current="projects" onNav={onNavigate} />}
     </div>
   );
 }

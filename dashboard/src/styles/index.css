@@ -17,6 +17,46 @@
   --cancelled: #7d8590;
   --radius: 6px;
   --radius-lg: 8px;
+  color-scheme: dark;
+}
+
+/* Light mode — OS preference driven. Manual override via [data-theme="light"] on <html>. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #ffffff;
+    --surface: #f6f8fa;
+    --surface-hover: #eaeef2;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --text-muted: #636c76;
+    --accent: #0969da;
+    --accent-subtle: rgba(9, 105, 218, 0.08);
+    --urgent: #cf222e;
+    --high: #bf8700;
+    --medium: #0969da;
+    --low: #636c76;
+    --done: #1a7f37;
+    --cancelled: #8c959f;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f6f8fa;
+  --surface-hover: #eaeef2;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --text-muted: #636c76;
+  --accent: #0969da;
+  --accent-subtle: rgba(9, 105, 218, 0.08);
+  --urgent: #cf222e;
+  --high: #bf8700;
+  --medium: #0969da;
+  --low: #636c76;
+  --done: #1a7f37;
+  --cancelled: #8c959f;
+  color-scheme: light;
 }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -451,6 +491,138 @@ button, .card, .tab, .cancelled-row, .project-card {
 
 .notes-editor::placeholder { color: var(--text-muted); opacity: 0.6; }
 
+/* Theme toggle — small icon button in header */
+.theme-toggle {
+  padding: 6px 10px;
+  font-size: 15px;
+  line-height: 1;
+  min-width: 36px;
+}
+
+/* Milkdown / Crepe editor — blend with AB GitHub-dark theme */
+.notes-editor-milkdown {
+  width: 100%;
+  min-height: 400px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+.notes-editor-milkdown:focus-within {
+  border-color: var(--accent);
+}
+
+/* Override Crepe theme tokens to use AB CSS variables.
+   Font stack matches AB body + headings (no serif). Content width capped for readability. */
+.notes-editor-milkdown .milkdown {
+  --crepe-color-background: var(--bg);
+  --crepe-color-on-background: var(--text);
+  --crepe-color-surface: var(--surface);
+  --crepe-color-surface-low: var(--surface);
+  --crepe-color-on-surface: var(--text);
+  --crepe-color-on-surface-variant: var(--text-muted);
+  --crepe-color-outline: var(--border);
+  --crepe-color-primary: var(--accent);
+  --crepe-color-secondary: var(--accent-subtle);
+  --crepe-color-on-secondary: var(--text);
+  --crepe-color-inverse: var(--text);
+  --crepe-color-on-inverse: var(--bg);
+  --crepe-color-inline-code: var(--accent);
+  --crepe-color-error: var(--urgent);
+  --crepe-color-hover: var(--surface-hover);
+  --crepe-color-selected: var(--accent-subtle);
+  --crepe-color-shadow: rgba(0, 0, 0, 0.4);
+  --crepe-shadow-1: 0 1px 3px var(--crepe-color-shadow);
+  --crepe-shadow-2: 0 4px 12px var(--crepe-color-shadow);
+  /* Fonts: no serif. Match AB body stack. Title = default for Notion-style uniformity. */
+  --crepe-font-default: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, Helvetica, Arial, sans-serif;
+  --crepe-font-title: var(--crepe-font-default);
+  --crepe-font-code: ui-monospace, 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', Menlo, monospace;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Defensive overrides — Crepe's reset.css targets bare `.milkdown h1/h2/...` so some
+   rules may still pull --crepe-font-title; re-declare in case author specificity differs. */
+.notes-editor-milkdown .milkdown h1,
+.notes-editor-milkdown .milkdown h2,
+.notes-editor-milkdown .milkdown h3,
+.notes-editor-milkdown .milkdown h4,
+.notes-editor-milkdown .milkdown h5,
+.notes-editor-milkdown .milkdown h6 {
+  font-family: var(--crepe-font-default);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.notes-editor-milkdown .ProseMirror {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 32px 48px 64px;
+  min-height: 400px;
+  outline: none;
+  font-family: var(--crepe-font-default);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.notes-editor-milkdown .ProseMirror h1 {
+  font-size: 2em;
+  margin: 32px 0 8px;
+  letter-spacing: -0.02em;
+}
+.notes-editor-milkdown .ProseMirror h2 {
+  font-size: 1.5em;
+  margin: 24px 0 6px;
+  letter-spacing: -0.015em;
+}
+.notes-editor-milkdown .ProseMirror h3 {
+  font-size: 1.25em;
+  margin: 20px 0 4px;
+}
+.notes-editor-milkdown .ProseMirror h1:first-child,
+.notes-editor-milkdown .ProseMirror h2:first-child,
+.notes-editor-milkdown .ProseMirror h3:first-child { margin-top: 0; }
+.notes-editor-milkdown .ProseMirror p { margin: 4px 0; }
+.notes-editor-milkdown .ProseMirror ul,
+.notes-editor-milkdown .ProseMirror ol { margin: 4px 0; padding-left: 28px; }
+.notes-editor-milkdown .ProseMirror li { margin: 2px 0; }
+.notes-editor-milkdown .ProseMirror code {
+  background: var(--surface-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--crepe-font-code);
+  font-size: 0.88em;
+}
+.notes-editor-milkdown .ProseMirror pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-family: var(--crepe-font-code);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.notes-editor-milkdown .ProseMirror blockquote {
+  border-left: 3px solid var(--border);
+  margin: 8px 0;
+  padding: 2px 14px;
+  color: var(--text-muted);
+}
+.notes-editor-milkdown .ProseMirror a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.notes-editor-milkdown .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+
 /* Quick add */
 .quick-add-input {
   width: 100%;
@@ -475,6 +647,69 @@ button, .card, .tab, .cancelled-row, .project-card {
   letter-spacing: 0.04em;
   margin-bottom: 6px;
   padding: 0 4px;
+}
+
+/* Project header stacking */
+.project-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.project-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.project-header-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Bottom nav — mobile only (hidden by default) */
+.bottom-nav { display: none; }
+
+/* Editable project description */
+.description-field {
+  margin-bottom: 16px;
+}
+.description-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.description-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.description-editor {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+.description-editor:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.description-editor::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 
 /* Scrollbar */
@@ -597,7 +832,8 @@ button, .card, .tab, .cancelled-row, .project-card {
   .form-group textarea,
   .form-group select,
   .comment-input input,
-  .quick-add-input {
+  .quick-add-input,
+  .description-editor {
     font-size: 16px;
     padding: 10px 12px;
   }
@@ -625,6 +861,13 @@ button, .card, .tab, .cancelled-row, .project-card {
 
   /* Notes editor: fit the screen without forcing scroll */
   .notes-editor { min-height: 260px; font-size: 14px; padding: 12px; }
+  .notes-editor-milkdown { min-height: 260px; }
+  .notes-editor-milkdown .ProseMirror {
+    min-height: 260px;
+    padding: 20px 16px 48px;
+    font-size: 16px;
+    max-width: 100%;
+  }
   .notes-section { padding: 12px; }
 
   /* Projects grid: single column */
@@ -640,6 +883,53 @@ button, .card, .tab, .cancelled-row, .project-card {
   .comment-input { flex-direction: column; align-items: stretch; }
   .comment-input input { width: 100%; }
   .comment-input button { width: 100%; min-height: 40px; }
+
+  /* Project header: stack title row and badge row on their own lines */
+  .project-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  .project-header-title-row { width: 100%; gap: 10px; }
+  .project-header-badge-row { width: 100%; }
+
+  /* Top tabs replaced by bottom nav on mobile */
+  .main-tabs { display: none; }
+
+  /* Bottom nav — fixed thumb-reach strip */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 50;
+  }
+  .bottom-nav-item {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 4px 12px;
+    cursor: pointer;
+    min-height: 48px;
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+    font-family: inherit;
+  }
+  .bottom-nav-item.active {
+    color: var(--text);
+    border-top-color: var(--accent);
+  }
+
+  /* Reserve room at the bottom of the app for the nav so board/notes don't hide under it */
+  .app { padding-bottom: calc(48px + env(safe-area-inset-bottom)); }
 }
 
 /* Very small phones (<380px) — tighten further */

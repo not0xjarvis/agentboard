@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.3.0] — 2026-04-24
+
+### Mobile navigation + editable project description
+
+Opening a project on mobile was a trap. The top tabs (Board / My Focus / Agent Queue / Projects) disappeared, leaving only a tiny `← Back` button buried inside a row of badges. Getting back to the main board took two taps at best, and new users never found the back button at all.
+
+Also: once a project was created, there was no way to edit its description from the UI. Only notes were editable.
+
+Fixed both. On phones (≤640px), a persistent bottom nav replaces the top tabs — Board / Focus / Agents / Projects, always visible, always one tap away, even from inside a project. The project detail header splits the title row (Back + name) from the badge row (slug, status, category, priority) so nothing collides on a 375px screen. Description is now an editable textarea on the Notes tab with debounced auto-save, same pattern as notes. Desktop layout unchanged.
+
+- **Bottom nav (mobile only):** 4-button fixed strip with safe-area padding. Top tabs hidden on `≤640px`; shown again on desktop.
+- **Cross-context nav:** tapping Board from inside a project clears the project and jumps straight to the main board. No more "back then tab."
+- **Header reflow:** project name gets its own row. Badges wrap onto a second row instead of crowding the name.
+- **Editable description:** Notes tab now shows Description as a 2-row textarea above the markdown editor. 800ms debounce, saves via the existing `PUT /api/projects/:id`.
+- **Saving indicator:** shared between notes and description, rendered next to whichever field you're editing.
+
+### Notion-grade markdown editor + light mode
+
+The Notes pane in the project drawer was a plain textarea. Markdown was stored but never rendered. Typing `# Header` showed `# Header`, not a header. If you came from Notion, the regression was the main thing keeping you on Notion.
+
+Replaced with a Milkdown/Crepe editor that renders live. Type `# Heading` and the line styles itself. Type `- [ ] Task` and a checkbox appears, click to toggle. Type `/` and a slash menu opens with heading, list, todo, code, quote, table, divider. Code blocks get syntax highlighting via CodeMirror. Existing markdown notes load and render correctly — no migration needed.
+
+Also: **light mode.** Auto-switches on OS preference, or toggle manually via the ☀︎/🌙 button in the header. The whole app, not just the editor — GitHub-light palette for the kanban, project cards, modals, everything.
+
+The editor saves as plain markdown to the same `notes` column. No schema change, no API change. Round-trips byte-clean (modulo trailing newline normalization). Revertible with `git revert` and your notes still display in the old textarea.
+
+- **Live formatting:** type markdown, see formatted output. Headers, lists, todos, code blocks, blockquotes, tables, links, dividers.
+- **Slash menu:** `/` opens block insertion. Notion-style.
+- **Font:** system sans-serif (Inter/SF/Segoe), no more Noto Serif. Matches the rest of AB.
+- **Readable width:** editor content caps at 780px for comfortable line length, Notion-style.
+- **Light mode:** OS-preference-driven with manual toggle. Persisted to localStorage under `ab-theme`.
+- **Theme propagation:** Crepe's tokens derive from AB's CSS variables — editor follows whatever theme the rest of the app is using.
+- **Mobile:** larger font (16px) and tighter padding on phones.
+- **Bundle cost:** main chunk grew from ~250KB to ~1.6MB (517KB gz). Lazy-loading the editor on Notes-tab open is a follow-up — fine for a self-hosted dashboard, worth optimizing if it ever ships externally.
+
+### Itemized changes
+
+- New: `dashboard/src/components/NotesEditor.jsx` — Milkdown/Crepe wrapper, listener-based onChange, mount-once with `key={project.id}` for project switching.
+- New: `dashboard/src/components/ThemeToggle.jsx` — ☀︎/🌙 button. Reads OS preference as default, persists manual override to localStorage, applies `data-theme` attribute to `<html>`.
+- New deps: `@milkdown/crepe`, `@milkdown/core`, `@milkdown/preset-commonmark`, `@milkdown/preset-gfm`, `@milkdown/plugin-slash`, `@milkdown/plugin-listener`, `@milkdown/react`, `@milkdown/theme-nord`.
+- Changed: `ProjectPage.jsx:151` — textarea → NotesEditor; existing debounced save unchanged.
+- Changed: `App.jsx` — ThemeToggle rendered in header action bar.
+- Changed: `styles/index.css` — light-mode CSS variables scoped to `@media (prefers-color-scheme: light)` and `[data-theme="light"]`; `.notes-editor-milkdown` with font-family override (no serif), 780px content max-width, Notion-style spacing; ProseMirror element styles for headings/lists/code/blockquote; mobile breakpoint.
+- Out of scope (later): task notes (separate component), slash command for linking other AB pages, image uploads, lazy-load to shrink bundle.
+
 ## [0.2.2] — 2026-04-23
 
 ### CLI polish

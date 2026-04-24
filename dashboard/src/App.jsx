@@ -5,6 +5,8 @@ import TaskModal from './components/TaskModal.jsx';
 import CreateTaskModal from './components/CreateTaskModal.jsx';
 import CreateProjectModal from './components/CreateProjectModal.jsx';
 import ProjectPage from './components/ProjectPage.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
+import BottomNav from './components/BottomNav.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 const CANCELLED_COL = 'Cancelled';
@@ -45,6 +47,12 @@ export default function App() {
   const handleProjectCreated = () => { setShowCreateProject(false); load(); };
   const handleTaskUpdated = () => { setSelectedTask(null); load(); };
 
+  const nav = (v) => {
+    setSelectedProject(null);
+    setView(v);
+    setFilterAssignee(v === 'my-focus' ? 'Human' : v === 'agent-queue' ? 'Agent' : '');
+  };
+
   const grouped = {};
   for (const col of COLUMNS) grouped[col] = [];
   grouped[CANCELLED_COL] = [];
@@ -60,6 +68,7 @@ export default function App() {
         project={selectedProject}
         onBack={() => { setSelectedProject(null); load(); }}
         onTaskClick={setSelectedTask}
+        onNavigate={nav}
       />
     );
   }
@@ -69,16 +78,17 @@ export default function App() {
       <div className="header">
         <h1>AgentBoard</h1>
         <div className="header-actions">
+          <ThemeToggle />
           <button className="btn btn-sm" onClick={() => setShowCreateProject(true)}>+ Project</button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>+ Task</button>
         </div>
       </div>
 
-      <div className="tabs">
-        <button className={`tab ${view === 'board' ? 'active' : ''}`} onClick={() => { setView('board'); setFilterAssignee(''); }}>Board</button>
-        <button className={`tab ${view === 'my-focus' ? 'active' : ''}`} onClick={() => { setView('my-focus'); setFilterAssignee('Human'); }}>My Focus</button>
-        <button className={`tab ${view === 'agent-queue' ? 'active' : ''}`} onClick={() => { setView('agent-queue'); setFilterAssignee('Agent'); }}>Agent Queue</button>
-        <button className={`tab ${view === 'projects' ? 'active' : ''}`} onClick={() => { setView('projects'); setFilterAssignee(''); }}>Projects</button>
+      <div className="tabs main-tabs">
+        <button className={`tab ${view === 'board' ? 'active' : ''}`} onClick={() => nav('board')}>Board</button>
+        <button className={`tab ${view === 'my-focus' ? 'active' : ''}`} onClick={() => nav('my-focus')}>My Focus</button>
+        <button className={`tab ${view === 'agent-queue' ? 'active' : ''}`} onClick={() => nav('agent-queue')}>Agent Queue</button>
+        <button className={`tab ${view === 'projects' ? 'active' : ''}`} onClick={() => nav('projects')}>Projects</button>
       </div>
 
       {view === 'projects' ? (
@@ -155,6 +165,8 @@ export default function App() {
       {showCreateProject && (
         <CreateProjectModal onClose={() => setShowCreateProject(false)} onCreate={handleProjectCreated} />
       )}
+
+      <BottomNav current={view} onNav={nav} />
     </div>
   );
 }

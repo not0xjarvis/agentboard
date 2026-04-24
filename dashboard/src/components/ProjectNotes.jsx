@@ -39,7 +39,7 @@ function setNoteIdInUrl(id) {
   } catch { /* ignore */ }
 }
 
-export default function ProjectNotes({ project }) {
+export default function ProjectNotes({ project, onMentionNavigate, initialNoteId }) {
   const [notes, setNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [expanded, setExpanded] = useState(() => readExpanded(project.id));
@@ -59,18 +59,19 @@ export default function ProjectNotes({ project }) {
     return rows;
   }, [project.id]);
 
-  // First load: pick the selected note from URL or the first root note.
+  // First load: pick the selected note from explicit prop, URL, or the first root note.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const rows = await reload();
       if (cancelled) return;
+      const fromProp = initialNoteId && rows.some((n) => n.id === initialNoteId) ? initialNoteId : null;
       const urlId = getNoteIdFromUrl();
-      const wanted = urlId && rows.some((n) => n.id === urlId) ? urlId : (rows[0]?.id ?? null);
-      setSelectedId(wanted);
+      const fromUrl = urlId && rows.some((n) => n.id === urlId) ? urlId : null;
+      setSelectedId(fromProp ?? fromUrl ?? (rows[0]?.id ?? null));
     })();
     return () => { cancelled = true; };
-  }, [project.id, reload]);
+  }, [project.id, reload, initialNoteId]);
 
   // Persist expanded state per project.
   useEffect(() => {
@@ -193,6 +194,20 @@ export default function ProjectNotes({ project }) {
     }
   };
 
+  const handleSetIcon = async (id, icon) => {
+    // Optimistic: flip the icon in local state so the tree updates immediately.
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, icon } : n)));
+    if (currentNoteRef.current && currentNoteRef.current.id === id) {
+      currentNoteRef.current = { ...currentNoteRef.current, icon };
+    }
+    try {
+      await api.updateNote(id, { icon });
+    } catch {
+      // Refetch to reconcile.
+      reload();
+    }
+  };
+
   const handleMove = async (draggedId, newParentId) => {
     // Don't move onto self.
     if (draggedId === newParentId) return;
@@ -239,6 +254,7 @@ export default function ProjectNotes({ project }) {
           onRename={handleRename}
           onDelete={handleDelete}
           onMove={handleMove}
+          onSetIcon={handleSetIcon}
         />
       </div>
 
@@ -268,6 +284,11 @@ export default function ProjectNotes({ project }) {
               >
                 ☰
               </button>
+              {selectedNote.icon && (
+                <span className="project-notes-title-icon" aria-hidden title={selectedNote.icon}>
+                  {selectedNote.icon}
+                </span>
+              )}
               <input
                 className="project-notes-title"
                 value={selectedNote.title}
@@ -292,6 +313,7 @@ export default function ProjectNotes({ project }) {
                 key={selectedNote.id}
                 value={editorContent}
                 onChange={handleContentChange}
+                onNavigate={onMentionNavigate}
                 placeholder="Type here. Slash (/) for block commands."
               />
             )}

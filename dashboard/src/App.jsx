@@ -8,6 +8,7 @@ import ProjectPage from './components/ProjectPage.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import ProjectsTable from './components/ProjectsTable.jsx';
+import { parseMentionUrl } from './components/mentionLink.js';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 const CANCELLED_COL = 'Cancelled';
@@ -34,6 +35,8 @@ export default function App() {
   const [view, setView] = useState('board');
   const [showCancelled, setShowCancelled] = useState(false);
   const [projectsView, setProjectsView] = useState(loadProjectsView);
+  // Nav target from an @-mention link. { projectId, noteId? } or null.
+  const [mentionTarget, setMentionTarget] = useState(null);
 
   useEffect(() => {
     try { localStorage.setItem(PROJECTS_VIEW_KEY, projectsView); } catch { /* ignore */ }
@@ -69,6 +72,35 @@ export default function App() {
     setFilterAssignee(v === 'my-focus' ? 'Human' : v === 'agent-queue' ? 'Agent' : '');
   };
 
+  // Resolve an /ab/... link from the notes editor to a project (+ optional note).
+  // Fetches the target note if needed to learn its project_id. We don't need a
+  // dedicated route — the UI is a single SPA with state-driven navigation.
+  const handleMentionNavigate = useCallback(async (href) => {
+    const target = parseMentionUrl(href);
+    if (!target) return;
+    if (target.kind === 'project') {
+      const proj = projects.find((p) => p.slug === target.slug)
+        || await api.getProjects().then((ps) => ps.find((p) => p.slug === target.slug));
+      if (proj) {
+        setMentionTarget({ projectId: proj.id });
+        setSelectedProject(proj);
+      }
+      return;
+    }
+    if (target.kind === 'note') {
+      try {
+        const note = await api.getNote(target.id);
+        if (!note) return;
+        const proj = projects.find((p) => p.id === note.project_id)
+          || await api.getProject(note.project_id);
+        if (proj) {
+          setMentionTarget({ projectId: proj.id, noteId: note.id });
+          setSelectedProject(proj);
+        }
+      } catch { /* swallow — broken links just no-op */ }
+    }
+  }, [projects]);
+
   const grouped = {};
   for (const col of COLUMNS) grouped[col] = [];
   grouped[CANCELLED_COL] = [];
@@ -79,12 +111,21 @@ export default function App() {
 
   // Project detail view
   if (selectedProject) {
+    const targetNoteId = mentionTarget && mentionTarget.projectId === selectedProject.id
+      ? mentionTarget.noteId
+      : undefined;
+    // Remount when the mention target changes so ProjectNotes picks up the new initialNoteId
+    // even when staying on the same project. Simpler than threading a nav callback.
+    const pageKey = `${selectedProject.id}:${targetNoteId ?? ''}`;
     return (
       <ProjectPage
+        key={pageKey}
         project={selectedProject}
-        onBack={() => { setSelectedProject(null); load(); }}
+        onBack={() => { setSelectedProject(null); setMentionTarget(null); load(); }}
         onTaskClick={setSelectedTask}
         onNavigate={nav}
+        onMentionNavigate={handleMentionNavigate}
+        initialNoteId={targetNoteId}
       />
     );
   }

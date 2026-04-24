@@ -7,9 +7,20 @@ import CreateProjectModal from './components/CreateProjectModal.jsx';
 import ProjectPage from './components/ProjectPage.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
 import BottomNav from './components/BottomNav.jsx';
+import ProjectsTable from './components/ProjectsTable.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 const CANCELLED_COL = 'Cancelled';
+const PROJECTS_VIEW_KEY = 'ab-projects-view';
+
+function loadProjectsView() {
+  try {
+    const v = localStorage.getItem(PROJECTS_VIEW_KEY);
+    return v === 'table' ? 'table' : 'grid';
+  } catch {
+    return 'grid';
+  }
+}
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -22,6 +33,11 @@ export default function App() {
   const [filterAssignee, setFilterAssignee] = useState('');
   const [view, setView] = useState('board');
   const [showCancelled, setShowCancelled] = useState(false);
+  const [projectsView, setProjectsView] = useState(loadProjectsView);
+
+  useEffect(() => {
+    try { localStorage.setItem(PROJECTS_VIEW_KEY, projectsView); } catch { /* ignore */ }
+  }, [projectsView]);
 
   const load = useCallback(async () => {
     const params = {};
@@ -92,22 +108,41 @@ export default function App() {
       </div>
 
       {view === 'projects' ? (
-        <div style={{ padding: 20 }}>
-          <div className="projects-grid">
-            {projects.map(p => (
-              <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
-                <div className="project-card-header">
-                  <span className="project-card-name">{p.name}</span>
-                  <span className={`badge priority-${p.priority === 'P0' ? 'urgent' : p.priority === 'P1' ? 'high' : p.priority === 'P2' ? 'medium' : 'low'}`}>{p.priority}</span>
-                </div>
-                <div className="project-card-desc">{p.description || 'No description'}</div>
-                <div className="card-meta" style={{ marginTop: 8 }}>
-                  <span className={`badge ${p.status === 'Active' ? 'priority-medium' : 'priority-low'}`}>{p.status}</span>
-                  {p.category && <span className="badge label">{p.category}</span>}
-                </div>
-              </div>
-            ))}
+        <div className="projects-view">
+          <div className="projects-toolbar">
+            <div className="view-toggle" role="group" aria-label="Projects view">
+              <button
+                className={`view-toggle-btn ${projectsView === 'grid' ? 'active' : ''}`}
+                onClick={() => setProjectsView('grid')}
+                aria-pressed={projectsView === 'grid'}
+              >Grid</button>
+              <button
+                className={`view-toggle-btn ${projectsView === 'table' ? 'active' : ''}`}
+                onClick={() => setProjectsView('table')}
+                aria-pressed={projectsView === 'table'}
+              >Table</button>
+            </div>
           </div>
+          {projectsView === 'table' ? (
+            <ProjectsTable projects={projects} onProjectClick={setSelectedProject} />
+          ) : (
+            <div className="projects-grid">
+              {projects.length === 0 && <div className="projects-empty">No projects yet</div>}
+              {projects.map(p => (
+                <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
+                  <div className="project-card-header">
+                    <span className="project-card-name">{p.name}</span>
+                    <span className={`badge priority-${p.priority === 'P0' ? 'urgent' : p.priority === 'P1' ? 'high' : p.priority === 'P2' ? 'medium' : 'low'}`}>{p.priority}</span>
+                  </div>
+                  <div className="project-card-desc">{p.description || 'No description'}</div>
+                  <div className="card-meta" style={{ marginTop: 8 }}>
+                    <span className={`badge ${p.status === 'Active' ? 'priority-medium' : 'priority-low'}`}>{p.status}</span>
+                    {p.category && <span className="badge label">{p.category}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <>

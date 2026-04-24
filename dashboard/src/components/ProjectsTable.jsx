@@ -153,6 +153,7 @@ export default function ProjectsTable({ projects, onProjectClick }) {
           {sorted.map(p => (
             <tr key={p.id} onClick={() => onProjectClick(p)}>
               <td className="col-name">
+                {p.icon && <span className="projects-table-icon" aria-hidden>{p.icon}</span>}
                 <span className="projects-table-name" title={p.name}>{p.name}</span>
               </td>
               <td>

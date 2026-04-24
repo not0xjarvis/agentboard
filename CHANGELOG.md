@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.7.0] — 2026-04-23
+
+### Page icons per project and note
+
+Projects and notes now have icons. "🍵 Matcha" reads in half the time "Matcha" does — you've been training on Notion for years and your eye catches the emoji before the word. AB finally returns the favor.
+
+- **Projects:** every project card in the grid, every row in the table, and the project detail header get an icon slot before the name. Click the slot to open a picker, click an emoji to set it. Null renders a tiny empty-box placeholder that only you see — it doesn't clutter the list.
+- **Notes:** every node in the sub-pages tree gets an icon slot next to the title. Same click-to-pick UX. The selected note's icon also appears next to the title above the editor.
+- **Picker:** ~60 curated emojis in an 8-column grid. Click outside or hit Escape to close without change. Arrow keys navigate, Enter confirms, and a "Remove" affordance clears the icon when one is set.
+- **Themes:** tile and popover inherit AB CSS variables; light and dark look equally good.
+- **Persistence:** saves via the existing `PUT /api/projects/:id` and `PUT /api/notes/:id` — icons are returned in every read so refresh picks up immediately.
+
+### Schema
+
+One nullable `icon TEXT` column added to `projects` and `project_notes`. Migration runs idempotently on boot (checks column existence before `ALTER`), so existing databases upgrade automatically and downgrades are safe — the column is ignored by older code.
+
+### API
+
+```
+PUT /api/projects/:id   { "icon": "🚀" }   // set
+PUT /api/projects/:id   { "icon": null }   // clear
+PUT /api/notes/:id      { "icon": "📝" }
+```
+
+Icons appear in all project and note GET responses. No new endpoints; no breaking changes.
+
+### Implementation notes
+
+The picker is a ~150-line React component with zero dependencies — just a curated emoji array and a grid. Keeping bundle flat was explicit; a full emoji library would've added 40KB+ gzipped for a capability most users don't need.
+
 ## [0.6.0] — 2026-04-24
 
 ### @-mention cross-page links in notes

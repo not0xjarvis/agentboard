@@ -185,6 +185,22 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_project_notes_position ON project_notes(project_id, parent_id, position);
 `);
 
+// --- v0.6.0: page icons / emoji (TSK-26) ---
+//
+// Optional single-emoji icon per project and per note. Nullable — existing
+// rows stay null and the UI renders a neutral fallback slot. Checks column
+// existence before ALTER so re-running the migration is a no-op.
+{
+  const projectColsForIcon = db.prepare("PRAGMA table_info(projects)").all().map(c => c.name);
+  if (!projectColsForIcon.includes('icon')) {
+    db.exec("ALTER TABLE projects ADD COLUMN icon TEXT");
+  }
+  const noteColsForIcon = db.prepare("PRAGMA table_info(project_notes)").all().map(c => c.name);
+  if (!noteColsForIcon.includes('icon')) {
+    db.exec("ALTER TABLE project_notes ADD COLUMN icon TEXT");
+  }
+}
+
 // Idempotent seed: for each project with non-empty notes AND zero rows in
 // project_notes for that project, insert a single root note. Subsequent runs
 // see non-zero count and skip.

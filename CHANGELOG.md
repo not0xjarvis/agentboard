@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.8.0] — 2026-04-24
+
+### Live dashboard — no more refresh lag
+
+When an agent (via CLI or MCP) moved a task, the dashboard took up to 5 seconds to catch up. You'd watch the Backlog column for a card to appear and nothing would happen until the next poll. Felt broken even when it wasn't.
+
+Replaced with Server-Sent Events. The server pushes a `change` event on every mutation; every open dashboard reloads its state within milliseconds. Watch the board while your agent ships tasks — cards move in real time.
+
+- **SSE endpoint:** `GET /api/events` streams `change` events. Topics: `tasks`, `projects`, `notes`, `comments`. Works through any proxy that doesn't buffer event-stream content type.
+- **Client-side:** new `useLiveEvents` hook in the dashboard, wired into the App, ProjectPage, and ProjectNotes. Auto-reconnects on drop with exponential backoff (500ms → 10s cap).
+- **Heartbeat:** server sends `: ping` every 20s to keep intermediaries from closing the stream.
+- **Fallback:** dashboards still poll every 30s in case SSE is blocked — slow is better than stale.
+- **Typing-aware:** live updates on the notes tree skip reload while the user has unsaved content in the editor, so nothing stomps on an in-progress edit.
+- **Write safely:** the broadcast fires on response `finish` with a 2xx status only. Errored mutations don't emit events.
+
+### Itemized changes
+
+- New: `server/sse.js` — tiny hub with `registerClient`, `broadcast`, `clientCount`. Pure ESM. Zero deps.
+- New: `dashboard/src/hooks/useLiveEvents.js` — EventSource wrapper with backoff reconnect and callback ref.
+- Changed: `server/index.js` — mounts `GET /api/events` and a single `res.on('finish')` middleware that infers the topic from the URL and broadcasts. One place, catches every mutation.
+- Changed: `dashboard/src/App.jsx` — polls every 30s (down from 5s); SSE handles the rest. Board / Projects views reload on `tasks` and `projects` topics.
+- Changed: `dashboard/src/components/ProjectPage.jsx` — reloads on `tasks`/`projects`/`comments`.
+- Changed: `dashboard/src/components/ProjectNotes.jsx` — reloads the tree on `notes` topic, but only when no pending save is in flight.
+
 ## [0.7.0] — 2026-04-23
 
 ### Page icons per project and note

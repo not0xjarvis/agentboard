@@ -6,6 +6,7 @@ import TaskModal from './TaskModal.jsx';
 import ProjectNotes from './ProjectNotes.jsx';
 import BottomNav from './BottomNav.jsx';
 import EmojiPicker from './EmojiPicker.jsx';
+import { useLiveEvents } from '../hooks/useLiveEvents.js';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 
@@ -38,6 +39,11 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
   }, [project.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Live updates: refresh the project context on any SSE change.
+  useLiveEvents((topic) => {
+    if (topic === 'tasks' || topic === 'projects' || topic === 'comments' || topic === 'change') load();
+  });
 
   // Auto-save description with debounce
   const handleDescChange = (e) => {

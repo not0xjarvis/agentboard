@@ -128,7 +128,16 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
         </div>
       </div>
 
-      <div className="tabs">
+      {/* Top-level nav stays visible inside a project so Board/Focus/Projects are always one click away. */}
+      {onNavigate && (
+        <div className="tabs main-tabs">
+          <button className="tab" onClick={() => onNavigate('board')}>Board</button>
+          <button className="tab" onClick={() => onNavigate('focus')}>Focus</button>
+          <button className="tab active" onClick={() => onNavigate('projects')}>Projects</button>
+        </div>
+      )}
+
+      <div className="tabs project-tabs">
         <button className={`tab ${tab === 'tasks' ? 'active' : ''}`} onClick={() => setTab('tasks')}>Tasks</button>
         <button className={`tab ${tab === 'notes' ? 'active' : ''}`} onClick={() => setTab('notes')}>Notes</button>
         <button className={`tab ${tab === 'activity' ? 'active' : ''}`} onClick={() => setTab('activity')}>Activity</button>
@@ -149,7 +158,7 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
 
       {tab === 'tasks' && (
         <>
-          <Board columns={COLUMNS} grouped={grouped} onCardClick={setSelectedTask} onStatusChange={handleStatusChange} />
+          <Board columns={COLUMNS} grouped={grouped} onCardClick={setSelectedTask} onStatusChange={handleStatusChange} hideProject />
           {cancelledTasks.length > 0 && (
             <div className="cancelled-section">
               <div className="cancelled-toggle" style={{ cursor: 'default' }}>

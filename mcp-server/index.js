@@ -28,9 +28,9 @@ server.tool('list_projects', 'List all projects', {}, async () => {
 });
 
 server.tool('list_tasks', 'List tasks with optional filters', {
-  status: z.string().optional().describe('Filter by status: Backlog, Todo, In Progress, In Review, Done, Cancelled'),
+  status: z.enum(['Backlog', 'Planning', 'Building', 'Review', 'Done', 'Cancelled']).optional().describe('Filter by status'),
   project_id: z.number().optional().describe('Filter by project ID'),
-  assignee: z.string().optional().describe('Filter by assignee: Human, Agent, Unassigned'),
+  assignee: z.enum(['Human', 'Agent', 'Unassigned']).optional().describe('Filter by assignee'),
 }, async ({ status, project_id, assignee }) => {
   const params = new URLSearchParams();
   if (status) params.set('status', status);
@@ -48,7 +48,7 @@ server.tool('get_backlog', 'Get tasks available for agents to pick up (Backlog/T
 server.tool('create_task', 'Create a new task', {
   name: z.string().describe('Task name'),
   description: z.string().optional().describe('Task description'),
-  status: z.enum(['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled']).optional(),
+  status: z.enum(['Backlog', 'Planning', 'Building', 'Review', 'Done', 'Cancelled']).optional(),
   priority: z.enum(['Urgent', 'High', 'Medium', 'Low']).optional(),
   assignee: z.enum(['Human', 'Agent', 'Unassigned']).optional(),
   project_id: z.number().optional().describe('Project ID to link to'),
@@ -62,7 +62,7 @@ server.tool('create_task', 'Create a new task', {
 server.tool('update_task', 'Update an existing task', {
   id: z.number().describe('Task ID'),
   name: z.string().optional(),
-  status: z.enum(['Backlog', 'Brainstorming', 'In Progress', 'In Review', 'Done', 'Cancelled']).optional(),
+  status: z.enum(['Backlog', 'Planning', 'Building', 'Review', 'Done', 'Cancelled']).optional(),
   priority: z.enum(['Urgent', 'High', 'Medium', 'Low']).optional(),
   assignee: z.enum(['Human', 'Agent', 'Unassigned']).optional(),
   project_id: z.number().optional(),
@@ -72,12 +72,12 @@ server.tool('update_task', 'Update an existing task', {
   return { content: [{ type: 'text', text: `Updated TSK-${task.id}: status=${task.status}, assignee=${task.assignee}` }] };
 });
 
-server.tool('claim_task', 'Claim a task from the backlog and move it to Brainstorming', {
+server.tool('claim_task', 'Claim a task from the backlog and move it to Planning', {
   id: z.number().describe('Task ID to claim'),
   assignee: z.string().optional().describe('Who is claiming: Human or Agent (default: Agent)'),
 }, async ({ id, assignee }) => {
   const task = await req(`/tasks/${id}/claim`, { method: 'POST', body: { assignee: assignee || 'Agent' } });
-  return { content: [{ type: 'text', text: `Claimed TSK-${task.id}: "${task.name}" → In Progress` }] };
+  return { content: [{ type: 'text', text: `Claimed TSK-${task.id}: "${task.name}" → Planning` }] };
 });
 
 server.tool('add_comment', 'Add a comment to a task', {
@@ -165,6 +165,60 @@ server.tool(
   async ({ id }) => {
     await req(`/notes/${id}`, { method: 'DELETE' });
     return { content: [{ type: 'text', text: `Deleted note #${id} (and any children).` }] };
+  }
+);
+
+// --- Focus queue: decisions blocking agents + human to-dos ---
+
+server.tool(
+  'block_task',
+  'Flag a task as needing a human decision. Use this INSTEAD of asking the user directly when running unattended. The task surfaces in the Focus tab for the human to answer. Status stays unchanged — the agent resumes when the human answers via unblock_task or the UI.',
+  {
+    id: z.number().describe('Task ID to block on a decision'),
+    question: z.string().describe('The question for the human — be specific, include options if you have them'),
+  },
+  async ({ id, question }) => {
+    await req(`/tasks/${id}`, {
+      method: 'PUT',
+      body: { needs_decision: 1, decision_question: question },
+    });
+    await req(`/tasks/${id}/comments`, {
+      method: 'POST',
+      body: { content: `[Decision requested] ${question}`, author: 'Agent' },
+    });
+    return { content: [{ type: 'text', text: `TSK-${id} blocked on decision. Surfaces in Focus tab. Stop work on this task until unblocked.` }] };
+  }
+);
+
+server.tool(
+  'unblock_task',
+  'Clear the needs_decision flag on a task, optionally recording the human answer as a comment. Typically called by the UI when the human answers in the Focus tab, but an agent can call it if it already has an answer.',
+  {
+    id: z.number().describe('Task ID to unblock'),
+    answer: z.string().optional().describe('The answer to record as a comment (from Human)'),
+  },
+  async ({ id, answer }) => {
+    if (answer) {
+      await req(`/tasks/${id}/comments`, {
+        method: 'POST',
+        body: { content: answer, author: 'Human' },
+      });
+    }
+    await req(`/tasks/${id}`, {
+      method: 'PUT',
+      body: { needs_decision: 0, decision_question: null },
+    });
+    return { content: [{ type: 'text', text: `TSK-${id} unblocked. Agent can resume.` }] };
+  }
+);
+
+server.tool(
+  'list_focus',
+  'List what is currently in the human\'s Focus queue: tasks with needs_decision=1 plus open tasks assigned to Human. Use this to check if the human has answered a prior block_task call.',
+  {},
+  async () => {
+    const tasks = await req('/tasks?focus=1');
+    return { content: [{ type: 'text', text: tasks.length ? JSON.stringify(tasks, null, 2) : 'Focus queue is empty.' }] };
   }
 );
 

@@ -9,7 +9,7 @@ const STAGE_ICON = {
   qa:     '✓',
 };
 
-export default function Card({ task, onClick }) {
+export default function Card({ task, onClick, hideProject }) {
   const handleDragStart = (e) => {
     e.dataTransfer.setData('taskId', task.id.toString());
     e.currentTarget.style.opacity = '0.5';
@@ -37,7 +37,7 @@ export default function Card({ task, onClick }) {
         {task.assignee !== 'Unassigned' && (
           <span className={`badge assignee-${task.assignee.toLowerCase()}`}>{task.assignee}</span>
         )}
-        {task.project_name && <span className="badge project">{task.project_name}</span>}
+        {!hideProject && task.project_name && <span className="badge project">{task.project_name}</span>}
         {task.size && <span className="badge size">{task.size}</span>}
         {task.rounds > 0 && <span className="badge rounds" title={`${task.rounds} round(s) of iteration`}>R{task.rounds}</span>}
         {task.pipeline_stage && (

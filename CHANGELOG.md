@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.10.0] — 2026-04-26
+
+### Delete a project from the UI
+
+There was no way to delete a project once created. The DELETE API existed but was UI-invisible. Now the project header has a Delete button. Confirm dialog requires you to type the project name to enable the destructive action.
+
+- **Two-step confirm:** Delete button opens a modal that lists exactly what's about to happen (notes cascade, tasks orphan, worktrees on disk untouched). The actual confirm button stays disabled until you type the project name verbatim.
+- **Cascade is honest:** project_notes have `ON DELETE CASCADE` and disappear with the project. Tasks have `ON DELETE SET NULL` so they survive but lose their project_id. The modal spells this out so nobody is surprised.
+- **Worktrees on disk are not touched.** GC them with `ab worktree gc` if you want.
+- **Escape and click-outside-cancel** both close the modal cleanly while not deleting.
+
+### Itemized changes
+
+- New: `dashboard/src/components/DeleteProjectModal.jsx` — type-to-confirm modal with cascade preview.
+- Changed: `dashboard/src/components/ProjectPage.jsx` — Delete button in header actions, modal wired to `api.deleteProject`, navigates back on success.
+- Changed: `dashboard/src/styles/index.css` — `.btn-danger` styling that uses `--urgent` palette in both themes.
+
 ## [0.8.0] — 2026-04-24
 
 ### Live dashboard — no more refresh lag

@@ -7,6 +7,7 @@ import ProjectNotes from './ProjectNotes.jsx';
 import BottomNav from './BottomNav.jsx';
 import EmojiPicker from './EmojiPicker.jsx';
 import { useLiveEvents } from '../hooks/useLiveEvents.js';
+import DeleteProjectModal from './DeleteProjectModal.jsx';
 
 const COLUMNS = ['Backlog', 'Planning', 'Building', 'Review', 'Done'];
 
@@ -23,7 +24,21 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
   const [tab, setTab] = useState(initialNoteId ? 'notes' : 'tasks');
   const [activity, setActivity] = useState([]);
   const [iconPickerRect, setIconPickerRect] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const descSaveTimeout = useRef(null);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.deleteProject(project.id);
+      // Navigate back to the projects list (existing onBack handler reloads)
+      onBack?.();
+    } catch (e) {
+      setDeleting(false);
+      alert('Delete failed: ' + (e?.message || 'unknown error'));
+    }
+  };
 
   const load = useCallback(async () => {
     const [t, p, proj, act] = await Promise.all([
@@ -125,6 +140,13 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
         <div className="header-actions">
           {project.repo_url && <a href={project.repo_url} target="_blank" rel="noopener" className="btn btn-sm">Repo</a>}
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddTask(true)}>+ Task</button>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => setShowDeleteConfirm(true)}
+            title="Delete project"
+          >
+            Delete
+          </button>
         </div>
       </div>
 
@@ -135,6 +157,16 @@ export default function ProjectPage({ project: initialProject, onBack, onTaskCli
           <button className="tab" onClick={() => onNavigate('focus')}>Focus</button>
           <button className="tab active" onClick={() => onNavigate('projects')}>Projects</button>
         </div>
+      )}
+
+      {showDeleteConfirm && (
+        <DeleteProjectModal
+          project={project}
+          taskCount={tasks.length}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+          deleting={deleting}
+        />
       )}
 
       <div className="tabs project-tabs">

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.1] — 2026-04-28
+
+### Runs cleanly under SelfStack
+
+AgentBoard ran fine via `node index.js`, but `selfstack install` produced a container that crashed at startup and a dashboard that 404'd at `/`. Three small fixes turn it into a real SelfStack app: the container now actually builds, restarts itself, and serves the dashboard.
+
+- **`COPY server/ .` was burying the freshly-built Linux `better_sqlite3.node` under the macOS host copy from `node_modules/`.** New `.dockerignore` excludes `**/node_modules`, `server/data` (the live SQLite DB shouldn't be baked into images), `**/.worktrees` (per-task worktrees would balloon the build context), and `.env*`.
+- **Container auto-restarts.** `docker-compose.yml` now sets `restart: unless-stopped` so the container survives Docker daemon restarts and Mac reboots without manual intervention. Apply to a live container with `docker update --restart=unless-stopped <name>`.
+- **Dashboard serves at `/` inside the container.** `server/index.js` was resolving `__dirname/../dashboard/dist`, which works in local dev (`server/` next to `dashboard/`) but resolves to `/dashboard/dist` inside the container where WORKDIR is `/app`. Now checks both candidate paths and uses whichever exists.
+
+### Itemized changes
+
+- New: `.dockerignore` — keeps host `node_modules`, `server/data` SQLite DB, screenshots, and worktrees out of the build context.
+- Changed: `docker-compose.yml` — added `restart: unless-stopped` on the `app` service.
+- Changed: `server/index.js` — dist path resolution now handles both local-dev and container layouts via `[candidates].find(existsSync)`.
+
 ## [0.10.0] — 2026-04-26
 
 ### Delete a project from the UI

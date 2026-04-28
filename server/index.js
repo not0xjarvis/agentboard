@@ -606,8 +606,13 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // --- Serve frontend ---
 
-const distPath = join(__dirname, '..', 'dashboard', 'dist');
-if (existsSync(distPath)) {
+// Local dev: server/ sits next to dashboard/, so dist is one level up.
+// Container (Dockerfile): WORKDIR is /app, dist is copied to /app/dashboard/dist.
+const distPath = [
+  join(__dirname, '..', 'dashboard', 'dist'),
+  join(__dirname, 'dashboard', 'dist'),
+].find(existsSync);
+if (distPath) {
   app.use(express.static(distPath));
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api')) {

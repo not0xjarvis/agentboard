@@ -3,11 +3,13 @@
 **/dist
 **/build
 **/.git
-**/.env
-**/.env.local
+**/.env*
 **/*.log
 **/.DS_Store
 **/.worktrees
+**/*.pem
+**/*.key
+**/.npmrc
 .playwright-mcp
 *.png
 server/data

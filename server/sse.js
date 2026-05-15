@@ -51,3 +51,18 @@ export function broadcast(topic, payload = null) {
 export function clientCount() {
   return clients.size;
 }
+
+// closeAll ends every active SSE stream with a `goodbye` event so connected
+// dashboards see a clean disconnect (and their backoff-reconnect logic kicks
+// in) instead of ECONNRESET when the server shuts down.
+export function closeAll() {
+  for (const res of clients) {
+    try {
+      res.write('event: goodbye\ndata: {"reason":"server shutting down"}\n\n');
+      res.end();
+    } catch {
+      /* already closed; the per-client cleanup handler removes it */
+    }
+  }
+  clients.clear();
+}

@@ -43,7 +43,7 @@ is the thin layer in between:
 - **Notes** — nested wiki pages per project (Milkdown WYSIWYG editor) with `@`-mention cross-page links — for design docs, specs, and decisions.
 - **Live updates** — the dashboard streams changes over Server-Sent Events; no refresh, no polling lag.
 - **Git worktree automation** — atomic claim → worktree → context file, plus `ab worktree list/gc/remove` housekeeping.
-- **PR tracking** — a background poller captures the PR URL for a claimed task within ~30s of the PR opening.
+- **PR tracking** — a background poller captures the PR URL for a claimed task within ~30s of the PR opening (needs the `gh` CLI on the host — see limitations).
 - **CLI + MCP** — the `ab` CLI for terminal use, and a Model Context Protocol server so agents get first-class tools.
 
 <table>
@@ -213,7 +213,7 @@ manage it alongside your other personal apps behind Tailscale.
 AgentBoard is used daily by its author but is **pre-1.0** — expect rough edges:
 
 - Single-user / single-tenant by design. There's no auth layer; it assumes a trusted network (Tailscale).
-- The PR-URL poller relies on the GitHub CLI (`gh`) being available where the server runs.
+- The PR-URL poller needs the GitHub CLI (`gh`, authenticated) on the host. The stock Docker image doesn't bundle `gh`, so PR tracking is a no-op in a vanilla container until you add it.
 - `ab worktree gc` is conservative (dry-run by default) and lightly battle-tested on real >7-day-old merged PRs.
 - No external test suite yet; `npm run build` and the `/api/health` smoke check are the current gates.
 

@@ -3,3 +3,8 @@ dist/
 data/
 *.db
 .DS_Store
+
+# Stray screenshots/QA artifacts in the repo root often contain real data —
+# keep them out of git. Intentional docs images live under docs/images/.
+/*.png
+.playwright-mcp/

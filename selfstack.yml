@@ -1,7 +1,7 @@
 name: agentboard
 display_name: AgentBoard
 description: Lightweight kanban board for AI agent task coordination
-version: 0.1.0
+version: 0.10.1
 
 runtime:
   type: docker-compose

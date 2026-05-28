@@ -5,7 +5,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import db from './db.js';
 import { startPrPoller } from './workers/pr-poller.js';
-import { registerClient, broadcast } from './sse.js';
+import { registerClient, broadcast, closeAll as closeAllSSE } from './sse.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -606,8 +606,15 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // --- Serve frontend ---
 
-const distPath = join(__dirname, '..', 'dashboard', 'dist');
-if (existsSync(distPath)) {
+// Local dev: server/ sits next to dashboard/, so dist is one level up.
+// Container (Dockerfile): WORKDIR is /app, dist is copied to /app/dashboard/dist.
+// Check for index.html (not just the directory) so an empty/stale dist
+// folder doesn't win over a valid sibling layout.
+const distPath = [
+  join(__dirname, '..', 'dashboard', 'dist'),
+  join(__dirname, 'dashboard', 'dist'),
+].find((p) => existsSync(join(p, 'index.html')));
+if (distPath) {
   app.use(express.static(distPath));
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api')) {
@@ -616,8 +623,56 @@ if (existsSync(distPath)) {
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`AgentBoard running on port ${PORT}`);
-  // Start background PR URL poller
-  startPrPoller(db);
 });
+
+// Start background PR URL poller; capture the handle so we can stop it
+// during graceful shutdown.
+const prPoller = startPrPoller(db);
+
+// Graceful shutdown for `restart: unless-stopped` and any other supervisor
+// that sends SIGTERM. Docker's default grace period before SIGKILL is 10s,
+// so each step has its own short bound. Order: stop accepting new work
+// (server.close) -> stop background pollers -> end SSE streams with a
+// goodbye event so dashboards reconnect cleanly -> checkpoint and close
+// the SQLite WAL via db.close.
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] received ${signal}, draining...`);
+
+  // Hard deadline: if anything below hangs, force-exit before Docker SIGKILLs.
+  const killTimer = setTimeout(() => {
+    console.warn('[shutdown] timeout reached, force-exiting');
+    process.exit(1);
+  }, 8000);
+  killTimer.unref();
+
+  // Stop accepting new HTTP connections; existing ones get a chance to drain.
+  server.close((err) => {
+    if (err) console.warn(`[shutdown] server.close: ${err.message}`);
+  });
+
+  // Stop the PR poller's setInterval so it doesn't fire mid-shutdown.
+  prPoller.stop?.();
+
+  // Tell every connected SSE client we're going away so their reconnect
+  // backoff fires immediately instead of waiting for TCP timeout.
+  closeAllSSE();
+
+  // Checkpoint the WAL and release the DB file. better-sqlite3 is sync.
+  try {
+    db.close();
+  } catch (e) {
+    console.warn(`[shutdown] db.close: ${e.message}`);
+  }
+
+  clearTimeout(killTimer);
+  console.log('[shutdown] complete');
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

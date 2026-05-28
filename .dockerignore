@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/dist
+**/build
+**/.git
+**/.env*
+**/*.log
+**/.DS_Store
+**/.worktrees
+**/*.pem
+**/*.key
+**/.npmrc
+.playwright-mcp
+*.png
+server/data

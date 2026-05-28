@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    restart: unless-stopped
     ports:
       - "${SELFSTACK_HOST_PORT:-3000}:3000"
     volumes:

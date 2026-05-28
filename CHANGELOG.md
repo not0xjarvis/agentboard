@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.10.1] — 2026-04-28
+
+### Runs cleanly under SelfStack
+
+AgentBoard ran fine via `node index.js`, but `selfstack install` produced a container that crashed at startup and a dashboard that 404'd at `/`. Three small fixes turn it into a real SelfStack app: the container now actually builds, restarts itself, and serves the dashboard.
+
+- **`COPY server/ .` was burying the freshly-built Linux `better_sqlite3.node` under the macOS host copy from `node_modules/`.** New `.dockerignore` excludes `**/node_modules`, `server/data` (the live SQLite DB shouldn't be baked into images), `**/.worktrees` (per-task worktrees would balloon the build context), and `.env*`.
+- **Container auto-restarts.** `docker-compose.yml` now sets `restart: unless-stopped` so the container survives Docker daemon restarts and Mac reboots without manual intervention. Apply to a live container with `docker update --restart=unless-stopped <name>`.
+- **Dashboard serves at `/` inside the container.** `server/index.js` was resolving `__dirname/../dashboard/dist`, which works in local dev (`server/` next to `dashboard/`) but resolves to `/dashboard/dist` inside the container where WORKDIR is `/app`. Now checks both candidate paths and uses whichever exists.
+
+### Itemized changes
+
+- New: `.dockerignore` — keeps host `node_modules`, `server/data` SQLite DB, screenshots, and worktrees out of the build context.
+- Changed: `docker-compose.yml` — added `restart: unless-stopped` on the `app` service.
+- Changed: `server/index.js` — dist path resolution now handles both local-dev and container layouts via `[candidates].find(existsSync)`.
+
+### Presentable for SelfStack
+
+The repo had no README and no icon. Now it reads like something you can understand and try in a minute, and it's listed in the SelfStack registry.
+
+- New: root `README.md` — value prop, quickstart (SelfStack / Docker Compose / local dev), the `ab` agent workflow, MCP setup, architecture diagram, config table, and honest limitations.
+- New: brand icon (`public/icon.svg` + `dashboard/public/icon.svg`) wired as the dashboard favicon.
+- New: dark-mode dashboard screenshots in `docs/images/` (board, Focus queue, projects), shot against a generic demo dataset so no real project data is published.
+- AgentBoard added to the SelfStack app registry, so `selfstack install agentboard` works.
+
 ## [0.10.0] — 2026-04-26
 
 ### Delete a project from the UI

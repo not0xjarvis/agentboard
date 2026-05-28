@@ -16,6 +16,15 @@ AgentBoard ran fine via `node index.js`, but `selfstack install` produced a cont
 - Changed: `docker-compose.yml` — added `restart: unless-stopped` on the `app` service.
 - Changed: `server/index.js` — dist path resolution now handles both local-dev and container layouts via `[candidates].find(existsSync)`.
 
+### Presentable for SelfStack
+
+The repo had no README and no icon. Now it reads like something you can understand and try in a minute, and it's listed in the SelfStack registry.
+
+- New: root `README.md` — value prop, quickstart (SelfStack / Docker Compose / local dev), the `ab` agent workflow, MCP setup, architecture diagram, config table, and honest limitations.
+- New: brand icon (`public/icon.svg` + `dashboard/public/icon.svg`) wired as the dashboard favicon.
+- New: dark-mode dashboard screenshots in `docs/images/` (board, Focus queue, projects), shot against a generic demo dataset so no real project data is published.
+- AgentBoard added to the SelfStack app registry, so `selfstack install agentboard` works.
+
 ## [0.10.0] — 2026-04-26
 
 ### Delete a project from the UI
